@@ -1,0 +1,3583 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SalaryMan — Controle Financeiro Pessoal</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%2305C98A'/%3E%3Cstop offset='1' stop-color='%233D7EFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='2' y='20' width='8' height='10' rx='2.5' fill='white' opacity='0.55'/%3E%3Crect x='12' y='12' width='8' height='18' rx='2.5' fill='white' opacity='0.8'/%3E%3Crect x='22' y='4' width='8' height='26' rx='2.5' fill='white'/%3E%3C/svg%3E">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- ✅ Google Identity Services (GIS) — método padrão atual do Google -->
+<!-- Substitui o antigo "Google Sign-In" (gapi). Carregamento assíncrono. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!--
+  ══════════════════════════════════════════════════════
+  CONFIGURAÇÃO DO CLIENT ID
+  ══════════════════════════════════════════════════════
+  Para usar em produção, substitua o valor abaixo pelo
+  seu Client ID do Google Cloud Console:
+
+  1. Acesse: https://console.cloud.google.com
+  2. Crie um projeto (ou selecione um existente)
+  3. Vá em: APIs e Serviços → Credenciais
+  4. Clique em "Criar credenciais" → ID do cliente OAuth 2.0
+  5. Tipo: Aplicativo da Web
+  6. Em "Origens JavaScript autorizadas" adicione:
+       http://localhost (para dev)
+       https://seudominio.com (para produção)
+  7. Copie o Client ID gerado e cole abaixo
+  ══════════════════════════════════════════════════════
+-->
+<meta name="google-client-id" content="SEU_CLIENT_ID.apps.googleusercontent.com">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap');
+
+/* ── TOKENS ─────────────────────────────────────────── */
+:root {
+  --g1: #05C98A; --g2: #3D7EFF;
+  --gradient: linear-gradient(135deg, var(--g1) 0%, var(--g2) 100%);
+  --gradient-r: linear-gradient(135deg, var(--g2) 0%, var(--g1) 100%);
+  --orange: #FF8C00; --red: #FF4D4D; --purple: #9B6DFF; --yellow: #FFB800;
+  --dark: #080E1E; --dark2: #0F1829; --dark3: #162035;
+  --surface: #FFFFFF; --bg: #F4F6FB; --bg2: #EEF1F8;
+  --border: #E3E8F0; --border2: #D5DCE8;
+  --text: #111827; --text2: #5A6478; --text3: #9AA3B2;
+  --green-s: #E3FDF5; --blue-s: #EBF0FF; --red-s: #FFF0F0;
+  --orange-s: #FFF5E6; --purple-s: #F3EEFF;
+  --r-sm: 10px; --r-md: 16px; --r-lg: 22px; --r-xl: 28px;
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.04);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-glow: 0 4px 24px rgba(5,201,138,0.30);
+}
+
+/* ── RESET ──────────────────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { font-size:16px; -webkit-font-smoothing:antialiased; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+input, select, button, textarea { font-family:inherit; }
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+
+/* ── ONBOARDING ─────────────────────────────────────── */
+#onboarding {
+  position:fixed; inset:0; z-index:1000;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, #112240 0%, #060D1A 100%);
+  overflow-y:auto;
+}
+/* Noise texture overlay */
+#onboarding::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity:.4;
+}
+.ob-wrap { width:100%; max-width:420px; position:relative; z-index:1; }
+
+/* Orbs */
+.ob-orb { position:absolute; border-radius:50%; filter:blur(80px); pointer-events:none; }
+.ob-orb-1 { width:320px; height:320px; background:rgba(5,201,138,0.18); top:-120px; left:-80px; }
+.ob-orb-2 { width:260px; height:260px; background:rgba(61,126,255,0.15); bottom:-80px; right:-60px; }
+
+.ob-logo { text-align:center; margin-bottom:32px; }
+.ob-logo-icon {
+  width:64px; height:64px; margin:0 auto 16px;
+  background:var(--gradient); border-radius:20px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: floatIcon 3s ease-in-out infinite;
+}
+.ob-logo-icon svg { width:34px; height:34px; }
+@keyframes floatIcon { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.ob-logo h1 { font-size:26px; font-weight:800; color:#fff; letter-spacing:-0.5px; }
+.ob-logo p { font-size:13.5px; color:rgba(255,255,255,0.42); margin-top:4px; }
+
+.ob-card {
+  background:rgba(255,255,255,0.045);
+  border:1px solid rgba(255,255,255,0.10);
+  border-radius:var(--r-xl); padding:30px 28px;
+  backdrop-filter:blur(24px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.ob-progress { display:flex; gap:5px; margin-bottom:26px; }
+.ob-progress span { flex:1; height:3px; border-radius:99px; background:rgba(255,255,255,0.10); transition:all .35s ease; }
+.ob-progress span.done { background:var(--g1); }
+.ob-progress span.act { background:rgba(255,255,255,0.45); }
+
+.ob-step { display:none; }
+.ob-step.active { display:block; animation:obIn .35s cubic-bezier(.22,.68,0,1.2); }
+@keyframes obIn { from{opacity:0;transform:translateY(14px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+
+.ob-icon { font-size:32px; margin-bottom:10px; }
+.ob-step h2 { font-size:21px; font-weight:800; color:#fff; margin-bottom:5px; letter-spacing:-0.3px; }
+.ob-step p { font-size:13.5px; color:rgba(255,255,255,0.46); margin-bottom:22px; line-height:1.6; }
+
+.ob-social { display:flex; flex-direction:column; gap:9px; margin-bottom:14px; }
+.ob-social-btn {
+  display:flex; align-items:center; gap:12px; padding:12px 16px;
+  border-radius:var(--r-md); border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06); color:#fff; font-size:14px; font-weight:500;
+  cursor:pointer; transition:all .2s;
+}
+.ob-social-btn:hover { background:rgba(255,255,255,0.10); transform:translateY(-1px); }
+.ob-divider { text-align:center; color:rgba(255,255,255,0.22); font-size:12px; margin:12px 0; position:relative; }
+.ob-divider::before,.ob-divider::after { content:''; position:absolute; top:50%; width:38%; height:1px; background:rgba(255,255,255,0.10); }
+.ob-divider::before{left:0} .ob-divider::after{right:0}
+
+.ob-field { margin-bottom:13px; }
+.ob-field label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:rgba(255,255,255,0.45); display:block; margin-bottom:5px; }
+.ob-input {
+  width:100%; padding:12px 15px; border-radius:var(--r-sm);
+  border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.07); color:#fff; font-size:14.5px;
+  outline:none; transition:all .2s;
+}
+.ob-input::placeholder { color:rgba(255,255,255,0.28); }
+.ob-input:focus { border-color:var(--g1); background:rgba(5,201,138,0.08); box-shadow:0 0 0 3px rgba(5,201,138,0.12); }
+.ob-pfx { position:relative; }
+.ob-pfx .pfx { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,0.4); font-size:14px; }
+.ob-pfx .ob-input { padding-left:32px; }
+
+.fixed-list { display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+.fixed-item { display:flex; gap:7px; align-items:center; }
+.fixed-item .ob-input { padding:10px 13px; font-size:13px; }
+.del-btn { width:36px; height:36px; flex-shrink:0; background:rgba(255,77,77,0.15); border:none; border-radius:8px; color:#FF4D4D; cursor:pointer; font-size:17px; transition:.2s; }
+.del-btn:hover { background:rgba(255,77,77,0.28); }
+.add-fixed { width:100%; padding:10px; background:rgba(255,255,255,0.04); border:1.5px dashed rgba(255,255,255,0.16); border-radius:10px; color:rgba(255,255,255,0.4); font-size:13px; cursor:pointer; transition:.2s; margin-bottom:14px; }
+.add-fixed:hover { border-color:var(--g1); color:var(--g1); }
+
+/* ── CUSTOM SELECT (substitui <select> nativo no onboarding) ── */
+.ob-select { position:relative; }
+.ob-sel-trigger {
+  width:100%; padding:12px 15px; border-radius:var(--r-sm);
+  border:1px solid rgba(255,255,255,0.14);
+  background:rgba(255,255,255,0.07); color:#fff; font-size:14.5px;
+  cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+  gap:8px; transition:all .2s; user-select:none;
+}
+.ob-sel-trigger:hover { border-color:rgba(255,255,255,0.28); background:rgba(255,255,255,0.10); }
+.ob-sel-trigger.open { border-color:var(--g1); background:rgba(5,201,138,0.08); box-shadow:0 0 0 3px rgba(5,201,138,0.12); }
+.ob-sel-arrow { font-size:11px; opacity:.55; transition:transform .22s ease; flex-shrink:0; }
+.ob-sel-trigger.open .ob-sel-arrow { transform:rotate(180deg); opacity:.9; }
+.ob-sel-menu {
+  position:absolute; top:calc(100% + 7px); left:0; right:0; z-index:200;
+  background:#0C1F35; border:1px solid rgba(255,255,255,0.14);
+  border-radius:var(--r-md); overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.3);
+  display:none;
+}
+.ob-sel-menu.open { display:block; animation:obIn .2s cubic-bezier(.22,.68,0,1.2); }
+.ob-sel-opt {
+  padding:12px 15px; color:rgba(255,255,255,0.7); font-size:14px;
+  cursor:pointer; transition:all .15s;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.ob-sel-opt:last-child { border-bottom:none; }
+.ob-sel-opt:hover { background:rgba(5,201,138,0.10); color:#fff; }
+.ob-sel-opt.active { background:rgba(5,201,138,0.16); color:var(--g1); font-weight:700; }
+.ob-sel-check { font-size:13px; opacity:0; transition:opacity .15s; }
+.ob-sel-opt.active .ob-sel-check { opacity:1; }
+
+.budget-sliders { display:flex; flex-direction:column; gap:12px; margin-bottom:20px; }
+.bs-item { padding:14px 15px; border-radius:var(--r-md); border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); }
+.bs-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+.bs-name { font-size:13.5px; font-weight:600; color:#fff; display:flex; align-items:center; gap:7px; }
+.bs-right { text-align:right; }
+.bs-pct { font-size:18px; font-weight:800; }
+.bs-val { font-size:11px; color:rgba(255,255,255,0.38); margin-top:1px; }
+.bs-bar { height:5px; background:rgba(255,255,255,0.10); border-radius:99px; overflow:hidden; }
+.bs-bar-fill { height:100%; border-radius:99px; transition:width .4s ease; }
+
+.ob-btn {
+  width:100%; padding:14px; border:none; border-radius:var(--r-md);
+  background:var(--gradient); color:#fff; font-size:15px; font-weight:700;
+  cursor:pointer; transition:all .2s;
+  box-shadow: 0 4px 20px rgba(5,201,138,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.ob-btn:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(5,201,138,0.45); }
+.ob-btn:active { transform:translateY(0); }
+.ob-link { text-align:center; margin-top:12px; font-size:13px; color:rgba(255,255,255,0.36); }
+.ob-link a { color:var(--g1); text-decoration:none; font-weight:600; cursor:pointer; }
+
+/* ── APP LAYOUT ─────────────────────────────────────── */
+#app { display:none; min-height:100vh; }
+
+/* Bottom nav */
+.bottom-nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:100;
+  background:rgba(255,255,255,0.95); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex; padding:6px 0 calc(env(safe-area-inset-bottom,0px) + 6px);
+  box-shadow:0 -4px 24px rgba(0,0,0,0.07);
+}
+.nav-tab {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:6px 4px; cursor:pointer; border:none; background:none;
+  color:var(--text3); transition:color .2s; position:relative;
+}
+.nav-tab .tab-icon { font-size:21px; transition:transform .2s; }
+.nav-tab .tab-label { font-size:10px; font-weight:600; letter-spacing:.01em; }
+.nav-tab.active { color:var(--g1); }
+.nav-tab.active .tab-icon { transform:scale(1.12) translateY(-1px); }
+/* Active indicator dot */
+.nav-tab.active::after {
+  content:''; position:absolute; bottom:2px; left:50%; transform:translateX(-50%);
+  width:4px; height:4px; background:var(--g1); border-radius:50%;
+  animation:dotPop .25s ease;
+}
+@keyframes dotPop { from{transform:translateX(-50%) scale(0)} to{transform:translateX(-50%) scale(1)} }
+
+/* FAB */
+.fab {
+  position:fixed; bottom:76px; right:18px; z-index:200;
+  width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
+  background:var(--gradient); color:#fff; font-size:24px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:var(--shadow-glow), 0 4px 12px rgba(0,0,0,0.15);
+  transition:all .22s cubic-bezier(.34,1.56,.64,1);
+}
+.fab:hover { transform:scale(1.08) rotate(45deg); }
+.fab:active { transform:scale(.96); }
+
+/* Screens */
+.screen { display:none; padding-bottom:82px; min-height:100vh; }
+.screen.active { display:block; animation:screenIn .28s ease; }
+@keyframes screenIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── COMPONENTS ─────────────────────────────────────── */
+.card {
+  background:var(--surface); border-radius:var(--r-lg);
+  border:1px solid var(--border); box-shadow:var(--shadow-sm);
+  transition:box-shadow .2s, transform .2s;
+}
+.card:hover { box-shadow:var(--shadow-md); }
+.card-inner { padding:20px; }
+
+.section { padding:0 16px; margin-bottom:18px; }
+.sec-label {
+  font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--text3); margin-bottom:11px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.sec-label a { font-size:12px; color:var(--g2); font-weight:600; text-transform:none; letter-spacing:0; cursor:pointer; text-decoration:none; }
+
+/* Badge */
+.badge {
+  display:inline-flex; align-items:center; gap:3px;
+  padding:3px 9px; border-radius:99px; font-size:11px; font-weight:700;
+  letter-spacing:.02em;
+}
+.bg-green { background:var(--green-s); color:#009966; }
+.bg-blue { background:var(--blue-s); color:#2B5FD8; }
+.bg-red { background:var(--red-s); color:#CC2222; }
+.bg-orange { background:var(--orange-s); color:#CC7000; }
+.bg-purple { background:var(--purple-s); color:#6B3FCC; }
+.bg-gray { background:var(--bg2); color:var(--text2); }
+
+/* Progress */
+.prog-track { background:var(--bg2); border-radius:99px; overflow:hidden; }
+.prog-fill { border-radius:99px; transition:width .6s cubic-bezier(.4,0,.2,1); }
+
+/* Buttons */
+.btn { padding:11px 18px; border-radius:var(--r-sm); font-size:13px; font-weight:700; cursor:pointer; border:none; transition:all .18s; }
+.btn-primary { background:var(--gradient); color:#fff; box-shadow:0 2px 10px rgba(5,201,138,.22); }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(5,201,138,.32); }
+.btn-ghost { background:var(--bg2); color:var(--text2); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--border); }
+.btn-sm { padding:7px 14px; font-size:12px; border-radius:8px; }
+.btn-icon { width:36px; height:36px; border-radius:9px; padding:0; display:flex; align-items:center; justify-content:center; font-size:15px; }
+
+/* ── SCREEN: HOME ────────────────────────────────────── */
+.home-header {
+  padding:18px 18px 14px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:50;
+  backdrop-filter:blur(12px);
+}
+.home-header .greeting { font-size:13.5px; color:var(--text2); }
+.home-header .month { font-size:19px; font-weight:800; letter-spacing:-.3px; margin-top:1px; }
+.notif-btn {
+  position:relative; width:40px; height:40px; border-radius:12px;
+  background:var(--bg2); border:1px solid var(--border); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  transition:.2s;
+}
+.notif-btn:hover { background:var(--border); }
+.notif-dot {
+  position:absolute; top:7px; right:7px; width:8px; height:8px;
+  background:var(--red); border-radius:50%; border:2px solid var(--surface);
+  animation:pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,.4)} 50%{box-shadow:0 0 0 5px rgba(255,77,77,0)} }
+
+/* Daily hero card */
+.daily-hero {
+  margin:16px 16px 0;
+  border-radius:var(--r-xl); overflow:hidden; position:relative;
+  background: linear-gradient(145deg, #071828 0%, #0C2540 40%, #0A1E38 100%);
+  box-shadow: 0 8px 40px rgba(5,201,138,0.18), 0 2px 8px rgba(0,0,0,0.2);
+}
+.dh-glow-1 {
+  position:absolute; width:280px; height:280px;
+  background:radial-gradient(circle, rgba(5,201,138,0.22) 0%, transparent 70%);
+  top:-80px; right:-60px; pointer-events:none;
+}
+.dh-glow-2 {
+  position:absolute; width:200px; height:200px;
+  background:radial-gradient(circle, rgba(61,126,255,0.18) 0%, transparent 70%);
+  bottom:-60px; left:-40px; pointer-events:none;
+}
+.dh-inner { padding:24px 22px 20px; position:relative; z-index:1; }
+.dh-label {
+  font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:rgba(255,255,255,0.45); margin-bottom:6px;
+}
+.dh-amount {
+  font-size:52px; font-weight:900; color:#fff; letter-spacing:-2px; line-height:1;
+  margin-bottom:5px; font-variant-numeric:tabular-nums;
+}
+.dh-amount .currency { font-size:24px; font-weight:600; opacity:.55; letter-spacing:0; vertical-align:super; margin-right:2px; }
+.dh-amount .cents { font-size:26px; font-weight:700; opacity:.7; letter-spacing:0; }
+.dh-sub { font-size:13px; color:rgba(255,255,255,0.45); margin-bottom:20px; }
+.dh-sub strong { color:var(--g1); font-weight:700; }
+.dh-stats {
+  display:grid; grid-template-columns:repeat(3,1fr);
+  background:rgba(255,255,255,0.06);
+  border-radius:var(--r-md); overflow:hidden;
+  border:1px solid rgba(255,255,255,0.08);
+}
+.dh-stat { padding:13px 10px; text-align:center; transition:.2s; }
+.dh-stat:not(:last-child) { border-right:1px solid rgba(255,255,255,0.07); }
+.dh-stat .sv { font-size:15px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; }
+.dh-stat .sl { font-size:10px; font-weight:500; color:rgba(255,255,255,0.38); margin-top:3px; text-transform:uppercase; letter-spacing:.06em; }
+
+/* Alert banner */
+.alert-banner {
+  margin:12px 16px; padding:14px 16px; border-radius:14px;
+  display:flex; gap:13px; align-items:center;
+  animation:alertSlide .35s cubic-bezier(.22,1,.36,1);
+  cursor:pointer; transition:transform .18s, box-shadow .18s;
+  position:relative; overflow:hidden;
+}
+.alert-banner:hover { transform:translateY(-2px); }
+.alert-banner::before {
+  content:''; position:absolute; top:-30px; right:-20px;
+  width:100px; height:100px; border-radius:50%;
+  background:rgba(255,255,255,0.1); pointer-events:none;
+}
+@keyframes alertSlide { from{opacity:0;transform:translateY(-10px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+.ab-warn {
+  background:linear-gradient(135deg,#F97316 0%,#EA580C 100%);
+  box-shadow:0 4px 20px rgba(249,115,22,.38);
+}
+.ab-danger {
+  background:linear-gradient(135deg,#EF4444 0%,#DC2626 100%);
+  box-shadow:0 4px 20px rgba(239,68,68,.38);
+}
+.ab-success {
+  background:linear-gradient(135deg,#10B981 0%,#059669 100%);
+  box-shadow:0 4px 20px rgba(16,185,129,.38);
+}
+.ab-icon-wrap {
+  width:42px; height:42px; border-radius:12px;
+  background:rgba(255,255,255,0.22); display:flex;
+  align-items:center; justify-content:center; flex-shrink:0;
+}
+.ab-icon { font-size:21px; line-height:1; flex-shrink:0; margin-top:0; }
+.ab-content { flex:1; min-width:0; }
+.ab-title { font-size:13.5px; font-weight:800; color:#fff; margin-bottom:3px; letter-spacing:.01em; }
+.ab-text { font-size:12px; color:rgba(255,255,255,0.88); line-height:1.5; }
+.ab-arrow { font-size:14px; color:rgba(255,255,255,0.65); flex-shrink:0; }
+
+/* Gauge card */
+.gauge-card { margin:12px 16px 0; }
+.gauge-inner { padding:18px 20px; }
+.gauge-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+.gauge-title { font-size:14.5px; font-weight:700; }
+.gauge-sub { font-size:12px; color:var(--text2); margin-top:2px; }
+.gauge-track { height:9px; background:var(--bg2); border-radius:99px; overflow:hidden; position:relative; }
+.gauge-fill {
+  height:100%; border-radius:99px;
+  background: linear-gradient(90deg, var(--g1) 0%, var(--g2) 100%);
+  transition:width .7s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 8px rgba(5,201,138,.4);
+}
+.gauge-marker {
+  position:absolute; top:-2px; height:13px; width:2px;
+  background:var(--orange); border-radius:99px;
+}
+.gauge-lbs { display:flex; justify-content:space-between; margin-top:7px; }
+.gauge-lbs span { font-size:11px; color:var(--text3); }
+
+/* Category pills */
+.cat-scroll { display:flex; gap:10px; overflow-x:auto; padding:0 16px; scrollbar-width:none; margin-bottom:0; }
+.cat-scroll::-webkit-scrollbar { display:none; }
+.cat-pill {
+  flex-shrink:0; min-width:88px;
+  display:flex; flex-direction:column; align-items:center; gap:7px;
+  padding:14px 12px; border-radius:var(--r-md);
+  background:var(--surface); border:1px solid var(--border);
+  cursor:pointer; transition:all .2s;
+}
+.cat-pill:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--g1); }
+.cp-icon { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:19px; }
+.cp-name { font-size:11px; font-weight:600; color:var(--text2); }
+.cp-val { font-size:14px; font-weight:800; color:var(--text); }
+.cp-bar { width:100%; height:3px; background:var(--bg2); border-radius:99px; overflow:hidden; }
+.cp-prog { height:100%; border-radius:99px; }
+
+/* Expense list */
+.exp-list .exp-item {
+  display:flex; align-items:center; gap:13px;
+  padding:13px 18px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .15s;
+}
+.exp-list .exp-item:last-child { border-bottom:none; }
+.exp-list .exp-item:hover { background:var(--bg); }
+.ei-icon {
+  width:42px; height:42px; border-radius:13px;
+  display:flex; align-items:center; justify-content:center; font-size:19px;
+  flex-shrink:0; transition:transform .2s;
+}
+.exp-item:hover .ei-icon { transform:scale(1.08); }
+.ei-info { flex:1; min-width:0; }
+.ei-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ei-cat { font-size:11.5px; color:var(--text2); margin-top:1px; }
+.ei-right { text-align:right; flex-shrink:0; }
+.ei-amount { font-size:14.5px; font-weight:800; color:var(--red); font-variant-numeric:tabular-nums; }
+.ei-date { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* ── SCREEN: GASTOS ──────────────────────────────────── */
+.page-header { padding:20px 18px 14px; background:var(--surface); border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50; }
+.page-header h1 { font-size:21px; font-weight:800; letter-spacing:-.4px; }
+.page-header p { font-size:13px; color:var(--text2); margin-top:2px; }
+
+.month-banner {
+  margin:16px; border-radius:var(--r-xl); overflow:hidden;
+  background:linear-gradient(135deg, #2B55E6 0%, #1A3ABF 100%);
+  box-shadow:0 8px 32px rgba(43,85,230,0.28);
+}
+.mb-inner { padding:20px 22px; }
+.mb-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
+.mb-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+.mb-val { font-size:30px; font-weight:900; color:#fff; letter-spacing:-1px; }
+.mb-budget { text-align:right; }
+.mb-prog-track { height:6px; background:rgba(255,255,255,0.18); border-radius:99px; margin-bottom:16px; overflow:hidden; }
+.mb-prog-fill { height:100%; border-radius:99px; background:#fff; transition:width .6s ease; }
+.mb-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:rgba(255,255,255,0.12); border-radius:var(--r-md); overflow:hidden; }
+.mb-stat { background:rgba(255,255,255,0.07); padding:12px; text-align:center; }
+.mb-stat .sv { font-size:15px; font-weight:800; color:#fff; }
+.mb-stat .sl { font-size:10px; color:rgba(255,255,255,0.45); margin-top:2px; text-transform:uppercase; letter-spacing:.05em; }
+
+.cat-chips { display:flex; gap:7px; overflow-x:auto; padding:0 16px 14px; scrollbar-width:none; }
+.cat-chips::-webkit-scrollbar { display:none; }
+.chip {
+  flex-shrink:0; padding:7px 14px; border-radius:99px; font-size:12px; font-weight:600;
+  border:1.5px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:all .18s;
+}
+.chip:hover { border-color:var(--g1); color:var(--g1); }
+.chip.on { background:var(--text); color:#fff; border-color:var(--text); }
+
+/* ── SCREEN: ORÇAMENTO ───────────────────────────────── */
+.budget-hero {
+  margin:16px; border-radius:var(--r-xl); overflow:hidden;
+  background:linear-gradient(145deg, #060E1C 0%, #0D2238 55%, #060E1C 100%);
+  box-shadow:0 8px 36px rgba(0,0,0,0.22);
+  border:1px solid rgba(255,255,255,0.07);
+}
+.bh-top { padding:22px 22px 16px; }
+.bh-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:rgba(255,255,255,0.38); margin-bottom:5px; }
+.bh-amount { font-size:38px; font-weight:900; color:#fff; letter-spacing:-1.5px; }
+.bh-sub { font-size:13px; color:rgba(255,255,255,0.38); margin-top:4px; }
+.bh-grid { display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid rgba(255,255,255,0.07); }
+.bh-cell { padding:14px 12px; text-align:center; }
+.bh-cell:not(:last-child) { border-right:1px solid rgba(255,255,255,0.07); }
+.bh-cell .bv { font-size:16px; font-weight:800; }
+.bh-cell .bl { font-size:10px; color:rgba(255,255,255,0.38); margin-top:2px; }
+.bh-e .bv { color:#7BAAFF; } .bh-l .bv { color:#00E8B0; } .bh-s .bv { color:#C4A5FF; }
+
+.bcat { padding:18px 20px; border-bottom:1px solid var(--border); }
+.bcat:last-child { border-bottom:none; }
+.bcat-head { display:flex; align-items:center; gap:12px; margin-bottom:13px; }
+.bcat-icon { width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:21px; flex-shrink:0; }
+.bcat-title { font-size:15px; font-weight:700; }
+.bcat-pct { font-size:12px; color:var(--text2); margin-top:1px; }
+.bcat-nums { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
+.bcat-spent { font-size:20px; font-weight:900; }
+.bcat-of { font-size:13px; color:var(--text3); }
+.bcat-pct-note { font-size:11.5px; font-weight:700; margin-top:6px; }
+.bcat-subs { margin-top:12px; display:flex; flex-direction:column; gap:4px; }
+.bcat-sub { display:flex; justify-content:space-between; padding:6px 0; }
+.bcat-sub .sn { font-size:13px; color:var(--text2); }
+.bcat-sub .sv { font-size:13px; font-weight:600; }
+.pct-row { display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); }
+.pct-row label { font-size:12px; color:var(--text2); flex:1; }
+.pct-row input[type=range] { flex:1.2; accent-color:var(--g1); }
+.pct-row span { font-size:13px; font-weight:800; color:var(--g1); min-width:35px; text-align:right; }
+
+/* ── SCREEN: METAS ───────────────────────────────────── */
+.meta-card { margin-bottom:13px; overflow:hidden; }
+.meta-head { display:flex; gap:14px; align-items:flex-start; padding:18px 18px 0; }
+.meta-ico { width:50px; height:50px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+.meta-info .mn { font-size:15px; font-weight:700; }
+.meta-info .ms { font-size:12px; color:var(--text2); margin-top:2px; }
+.meta-body { padding:14px 18px 18px; }
+.meta-nums { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:9px; }
+.meta-saved { font-size:24px; font-weight:900; }
+.meta-target { font-size:13px; color:var(--text3); }
+.meta-track { height:10px; background:var(--bg2); border-radius:99px; overflow:hidden; }
+.meta-fill { height:100%; border-radius:99px; transition:width .7s ease; }
+.meta-foot { display:flex; justify-content:space-between; align-items:center; margin-top:7px; }
+.meta-date { font-size:12px; color:var(--text2); display:flex; align-items:center; gap:4px; }
+.meta-pct { font-size:12px; font-weight:700; }
+.meta-actions { display:flex; gap:8px; margin-top:13px; }
+
+.add-meta {
+  border:2px dashed var(--border2); border-radius:var(--r-lg);
+  padding:28px; text-align:center; cursor:pointer;
+  transition:all .2s; background:transparent; margin-bottom:13px;
+}
+.add-meta:hover { border-color:var(--g1); background:var(--green-s); }
+.add-meta-icon { font-size:28px; margin-bottom:8px; }
+.add-meta p { font-size:14px; font-weight:600; color:var(--text2); }
+
+/* ── SCREEN: ALERTAS ─────────────────────────────────── */
+
+/* Send-all WhatsApp button */
+.alerts-wa-btn {
+  width:100%; display:flex; align-items:center; gap:10px;
+  background:linear-gradient(135deg,#25D366 0%,#128C7E 100%);
+  color:#fff; border:none; border-radius:14px;
+  padding:13px 16px; cursor:pointer; font-size:14px;
+  font-weight:700; box-shadow:0 4px 16px rgba(37,211,102,.3);
+  transition:transform .18s, box-shadow .18s; margin-bottom:4px;
+}
+.alerts-wa-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(37,211,102,.4); }
+.alerts-wa-icon {
+  width:34px; height:34px; border-radius:10px;
+  background:rgba(255,255,255,0.2); display:flex;
+  align-items:center; justify-content:center; flex-shrink:0;
+}
+.alerts-wa-label { flex:1; text-align:left; }
+.alerts-wa-count {
+  background:rgba(255,255,255,0.25); font-size:12px; font-weight:800;
+  padding:2px 9px; border-radius:99px; letter-spacing:.02em;
+}
+
+/* Per-card send button */
+.ac-wa-btn {
+  width:32px; height:32px; border-radius:10px; border:none;
+  background:#25D366; color:#fff; display:flex;
+  align-items:center; justify-content:center;
+  cursor:pointer; flex-shrink:0; opacity:0;
+  transition:opacity .18s, transform .18s;
+  box-shadow:0 2px 8px rgba(37,211,102,.35);
+}
+.alert-card:hover .ac-wa-btn { opacity:1; }
+.ac-wa-btn:hover { transform:scale(1.1); }
+
+.alert-card {
+  padding:14px 14px 14px 17px; border-radius:var(--r-md); margin-bottom:10px;
+  display:flex; gap:12px; align-items:center;
+  animation:alertSlide .3s ease; cursor:pointer; transition:all .2s;
+}
+.alert-card:hover { transform:translateY(-1px); box-shadow:var(--shadow-md); }
+.ac-crit { background:#FFF5F5; border:1px solid rgba(255,77,77,0.2); }
+.ac-warn { background:#FFFBEB; border:1px solid rgba(255,140,0,0.2); }
+.ac-info { background:var(--blue-s); border:1px solid rgba(61,126,255,0.2); }
+.ac-ok { background:var(--green-s); border:1px solid rgba(5,201,138,0.2); }
+.ac-icon { font-size:22px; flex-shrink:0; }
+.ac-title { font-size:13.5px; font-weight:700; margin-bottom:3px; }
+.ac-text { font-size:12.5px; color:var(--text2); line-height:1.55; }
+.ac-time { font-size:11px; color:var(--text3); margin-top:6px; }
+
+/* ── SCREEN: PERFIL ──────────────────────────────────── */
+.profile-hero {
+  background:linear-gradient(145deg, #071828 0%, #0C2540 100%);
+  padding:36px 20px 28px; text-align:center; position:relative; overflow:hidden;
+}
+.ph-orb {
+  position:absolute; border-radius:50%; filter:blur(60px); pointer-events:none;
+  width:200px; height:200px; background:rgba(5,201,138,0.15);
+  top:-60px; right:-40px;
+}
+.ph-avatar {
+  width:76px; height:76px; border-radius:50%; margin:0 auto 12px;
+  background:var(--gradient);
+  display:flex; align-items:center; justify-content:center;
+  font-size:30px; font-weight:900; color:#fff;
+  box-shadow:0 4px 24px rgba(5,201,138,0.35);
+  border:3px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1;
+}
+.ph-name { font-size:20px; font-weight:800; color:#fff; letter-spacing:-.3px; position:relative; z-index:1; }
+.ph-email { font-size:13px; color:rgba(255,255,255,0.4); margin-top:3px; position:relative; z-index:1; }
+.ph-plan { margin-top:10px; position:relative; z-index:1; }
+
+.si-list { overflow:hidden; }
+.si { display:flex; align-items:center; gap:13px; padding:14px 18px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+.si:last-child { border-bottom:none; }
+.si:hover { background:var(--bg); }
+.si-icon { width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+.si-text { flex:1; }
+.si-text .t { font-size:14px; font-weight:600; }
+.si-text .s { font-size:12px; color:var(--text2); margin-top:1px; }
+.si-arr { color:var(--text3); font-size:16px; }
+
+/* Trial card */
+.plan-trial {
+  border-radius:var(--r-lg); padding:20px; margin-bottom:12px;
+  background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);
+  border:1.5px solid rgba(249,115,22,0.45);
+  box-shadow:0 4px 20px rgba(249,115,22,0.15);
+}
+.pt-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; }
+.pt-badge {
+  font-size:9px; font-weight:800; letter-spacing:.1em;
+  color:#F97316; text-transform:uppercase; margin-bottom:5px;
+}
+.pt-title { font-size:15px; font-weight:800; color:#fff; }
+.pt-countdown {
+  font-size:38px; font-weight:900; color:#F97316;
+  line-height:1; letter-spacing:-1px;
+  text-shadow:0 0 20px rgba(249,115,22,.5);
+  position:relative;
+}
+.pt-countdown::after {
+  content:'dias'; position:absolute; bottom:2px; right:-22px;
+  font-size:9px; font-weight:700; color:rgba(249,115,22,.7);
+  text-transform:uppercase; letter-spacing:.06em;
+}
+.pt-bar-wrap {
+  height:5px; background:rgba(255,255,255,0.08);
+  border-radius:99px; margin-bottom:8px; overflow:hidden;
+}
+.pt-bar {
+  height:100%; border-radius:99px;
+  background:linear-gradient(90deg,#F97316,#EA580C);
+  transition:width 1s ease;
+}
+.pt-sub { font-size:11.5px; color:rgba(255,255,255,0.45); margin-bottom:14px; }
+.pt-features {
+  display:flex; flex-wrap:wrap; gap:6px;
+}
+.pt-features span {
+  font-size:11px; font-weight:600; color:rgba(255,255,255,0.7);
+  background:rgba(255,255,255,0.07); padding:4px 10px;
+  border-radius:99px; border:1px solid rgba(255,255,255,0.1);
+}
+.pt-urgency {
+  background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3);
+  border-radius:10px; padding:10px 14px; margin-bottom:12px;
+  font-size:12.5px; font-weight:600; color:#EF4444; line-height:1.4;
+}
+
+.plan-free { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r-lg); padding:20px; margin-bottom:12px; }
+.plan-pro {
+  border-radius:var(--r-lg); overflow:hidden;
+  background:linear-gradient(145deg, #071828, #0D2238);
+  border:1px solid rgba(5,201,138,0.25);
+  box-shadow:0 6px 24px rgba(5,201,138,0.12);
+}
+.plan-pro-inner { padding:22px; }
+.pn { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; margin-bottom:4px; }
+.pp { font-size:28px; font-weight:900; margin-bottom:6px; }
+.pp sub { font-size:15px; font-weight:400; opacity:.5; }
+.pf { font-size:13px; line-height:1.9; }
+.plan-free .pn { color:var(--text2); }
+.plan-pro .pn { color:var(--g1); }
+.plan-pro .pp { color:#fff; }
+.plan-pro .pf { color:rgba(255,255,255,0.55); }
+
+/* ── SUPORTE ─────────────────────────────────────────── */
+.support-card {
+  background:var(--surface); border:1.5px solid var(--border);
+  border-radius:16px; padding:18px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
+}
+.support-card-top { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
+.support-avatar {
+  width:44px; height:44px; border-radius:14px; flex-shrink:0;
+  background:linear-gradient(135deg,var(--g1),var(--g2));
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:800; color:#fff;
+}
+.support-name { font-size:14px; font-weight:700; color:var(--text1); margin-bottom:3px; }
+.support-status { font-size:12px; color:var(--text3); display:flex; align-items:center; gap:5px; }
+.support-dot {
+  width:7px; height:7px; border-radius:50%; background:#25D366;
+  box-shadow:0 0 0 2px rgba(37,211,102,0.25);
+  display:inline-block; animation:pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,100%{ box-shadow:0 0 0 2px rgba(37,211,102,0.25); }
+  50%{ box-shadow:0 0 0 5px rgba(37,211,102,0.1); }
+}
+.support-desc { font-size:13px; color:var(--text2); line-height:1.55; margin-bottom:14px; }
+.support-actions { display:flex; gap:8px; }
+.support-btn {
+  flex:1; padding:11px 10px; border:none; border-radius:12px;
+  font-size:13px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; gap:7px;
+  transition:transform .18s, box-shadow .18s;
+}
+.support-btn:hover { transform:translateY(-1px); }
+.support-wa {
+  background:linear-gradient(135deg,#25D366,#128C7E);
+  color:#fff; box-shadow:0 3px 12px rgba(37,211,102,0.3);
+}
+.support-bug {
+  background:var(--bg2); color:var(--text2);
+  border:1.5px solid var(--border);
+}
+body.dark .support-card { background:var(--bg2); border-color:var(--border2); }
+body.dark .support-bug  { background:var(--bg3,#1a2234); }
+
+/* ── MODALS ──────────────────────────────────────────── */
+.overlay {
+  position:fixed; inset:0; z-index:800;
+  background:rgba(10,14,30,0.55); backdrop-filter:blur(4px);
+  display:none; align-items:flex-end; justify-content:center;
+}
+.overlay.open { display:flex; animation:fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.sheet {
+  background:var(--surface); border-radius:28px 28px 0 0;
+  width:100%; max-width:500px; padding:0 0 32px;
+  box-shadow:0 -8px 40px rgba(0,0,0,0.18);
+  animation:sheetUp .3s cubic-bezier(.32,.72,0,1);
+}
+@keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.sheet-handle { width:36px; height:4px; background:var(--border2); border-radius:99px; margin:12px auto 20px; }
+.sheet-title { font-size:18px; font-weight:800; letter-spacing:-.3px; padding:0 20px 18px; }
+
+.f-row { margin-bottom:14px; padding:0 20px; }
+.f-row label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--text2); display:block; margin-bottom:5px; }
+.f-row input, .f-row select {
+  width:100%; padding:13px 14px; border:1.5px solid var(--border);
+  border-radius:var(--r-sm); font-size:14px; color:var(--text); outline:none;
+  background:var(--bg); transition:all .2s;
+}
+.f-row input:focus, .f-row select:focus { border-color:var(--g1); background:var(--surface); box-shadow:0 0 0 3px rgba(5,201,138,0.10); }
+.f-pfx { position:relative; }
+.f-pfx .pfx { position:absolute; left:13px; top:50%; transform:translateY(-50%); color:var(--text2); font-weight:600; font-size:14px; }
+.f-pfx input { padding-left:30px; }
+.f-big input { font-size:24px; font-weight:800; padding:16px 14px 16px 32px; }
+
+.cat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:0 20px; margin-bottom:16px; }
+.cat-btn {
+  display:flex; flex-direction:column; align-items:center; gap:5px;
+  padding:11px 6px; border-radius:var(--r-md); border:1.5px solid var(--border);
+  background:var(--surface); cursor:pointer; transition:all .18s;
+  font-size:11px; font-weight:600; color:var(--text2);
+}
+.cat-btn .em { font-size:22px; }
+.cat-btn:hover { border-color:var(--g1); background:var(--green-s); color:var(--g1); transform:scale(1.04); }
+.cat-btn.on { border-color:var(--g1); background:var(--green-s); color:#009966; }
+
+.sheet-actions { display:flex; gap:10px; padding:16px 20px 0; }
+.sheet-actions .btn { flex:1; padding:14px; font-size:14px; }
+
+/* ── TOASTER ─────────────────────────────────────────── */
+.toaster { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; gap:8px; width:calc(100% - 32px); max-width:380px; pointer-events:none; }
+.toast {
+  padding:13px 16px; border-radius:var(--r-md); font-size:13px; font-weight:600;
+  animation:toastIn .35s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:var(--shadow-lg); background:var(--surface);
+  display:flex; align-items:center; gap:10px;
+  pointer-events:all;
+}
+@keyframes toastIn { from{opacity:0;transform:translateY(-14px) scale(.94)} to{opacity:1;transform:translateY(0) scale(1)} }
+.t-ok { border-left:4px solid var(--g1); }
+.t-err { border-left:4px solid var(--red); }
+.t-warn { border-left:4px solid var(--orange); }
+.toast-icon { font-size:17px; }
+
+/* ── GOOGLE SIGN-IN ──────────────────────────────────── */
+/* Container para o botão renderizado pelo GIS */
+#google-btn-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 9px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+/* Sobrepõe o iframe do GIS para preencher largura total */
+#google-btn-wrap iframe {
+  width: 100% !important;
+}
+
+/* Estado de carregamento enquanto o GIS não inicia */
+.gis-loading {
+  width: 100%; padding: 13px 16px;
+  border-radius: var(--r-md); border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.5);
+  font-size: 14px; text-align: center; animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+/* Card de boas-vindas pós-login Google */
+.google-user-card {
+  display: none; /* exibido via JS após login */
+  align-items: center; gap: 12px;
+  padding: 13px 15px; margin-bottom: 14px;
+  border-radius: var(--r-md);
+  background: rgba(5,201,138,0.12);
+  border: 1px solid rgba(5,201,138,0.30);
+  animation: obIn .4s ease;
+}
+.google-user-card.visible { display: flex; }
+.guc-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid rgba(5,201,138,0.5);
+  object-fit: cover;
+}
+.guc-avatar-fallback {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--gradient); display: flex; align-items: center;
+  justify-content: center; font-size: 18px; font-weight: 800; color: #fff;
+  border: 2px solid rgba(5,201,138,0.5); flex-shrink: 0;
+}
+.guc-info { flex: 1; min-width: 0; }
+.guc-name { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guc-email { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guc-check { font-size: 20px; flex-shrink: 0; }
+
+/* ── ONBOARDING FREQ CHIPS ──────────────────────────── */
+.ob-freq-grid {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:10px; margin-bottom:22px;
+}
+.ob-freq-chip {
+  position:relative; text-align:center; padding:14px 10px 13px;
+  border-radius:14px; border:1.5px solid rgba(255,255,255,0.10);
+  background:rgba(255,255,255,0.04); cursor:pointer;
+  transition:all .22s cubic-bezier(.22,.68,0,1.2);
+  overflow:hidden; user-select:none;
+}
+.ob-freq-chip::before {
+  content:''; position:absolute; inset:0; opacity:0;
+  background:radial-gradient(circle at 50% 0%, rgba(37,211,102,0.18) 0%, transparent 70%);
+  transition:opacity .3s;
+}
+.ob-freq-chip.on::before { opacity:1; }
+.ob-freq-chip:hover:not(.on) { border-color:rgba(255,255,255,0.22); background:rgba(255,255,255,0.07); transform:translateY(-1px); }
+.ob-freq-chip.on {
+  border-color:#25D366;
+  background:rgba(37,211,102,0.10);
+  transform:translateY(-2px);
+  box-shadow:0 6px 24px rgba(37,211,102,0.22), 0 0 0 3px rgba(37,211,102,0.10);
+}
+.ob-freq-chip.on:active,.ob-freq-chip:active { transform:translateY(0) scale(.97); }
+.ob-freq-em {
+  font-size:26px; display:block; margin-bottom:6px;
+  transition:transform .25s cubic-bezier(.22,.68,0,1.5);
+}
+.ob-freq-chip.on .ob-freq-em { transform:scale(1.15); }
+.ob-freq-name {
+  font-size:13px; font-weight:700; display:block;
+  color:rgba(255,255,255,0.45); transition:color .2s; margin-bottom:2px;
+}
+.ob-freq-chip.on .ob-freq-name { color:#5CF898; }
+.ob-freq-desc {
+  font-size:10.5px; display:block;
+  color:rgba(255,255,255,0.22); transition:color .2s; line-height:1.4;
+}
+.ob-freq-chip.on .ob-freq-desc { color:rgba(37,211,102,0.65); }
+.ob-freq-check {
+  position:absolute; top:8px; right:8px;
+  width:18px; height:18px; border-radius:50%;
+  background:#25D366; display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:#fff; font-weight:800;
+  opacity:0; transform:scale(0); transition:all .25s cubic-bezier(.22,.68,0,1.5);
+}
+.ob-freq-chip.on .ob-freq-check { opacity:1; transform:scale(1); }
+
+/* ── RELATÓRIOS / WHATSAPP ───────────────────────────── */
+.rpt-preview {
+  background: linear-gradient(145deg, #0C1F35 0%, #112240 100%);
+  border: 1px solid rgba(37,211,102,0.25);
+  border-radius: var(--r-md); padding: 16px;
+  font-family: 'Courier New', monospace; font-size: 12.5px;
+  color: #E8F5E9; line-height: 1.65; margin-bottom: 4px;
+  max-height: 220px; overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(37,211,102,0.10);
+}
+.rpt-preview .rpt-head { color: #25D366; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.rpt-preview .rpt-sep  { color: rgba(255,255,255,0.2); }
+.rpt-preview .rpt-ok   { color: #69F0AE; }
+.rpt-preview .rpt-warn { color: #FFB300; }
+.rpt-preview .rpt-bad  { color: #FF5252; }
+
+.wa-btn {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 15px; border-radius: var(--r-md); border: none;
+  background: #25D366; color: #fff; font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 20px rgba(37,211,102,0.35);
+}
+.wa-btn:hover { background: #20BD5C; transform: translateY(-1px); box-shadow: 0 6px 28px rgba(37,211,102,0.45); }
+.wa-btn:active { transform: translateY(0); }
+.wa-btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+.rpt-freq { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.rpt-chip {
+  flex: 1; min-width: 80px; text-align: center; padding: 9px 12px;
+  border-radius: 10px; border: 1.5px solid var(--border);
+  background: var(--bg2); color: var(--text2); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .18s;
+}
+.rpt-chip.on {
+  border-color: #25D366; background: rgba(37,211,102,0.08);
+  color: #1BA04A;
+}
+.rpt-period-row { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+.rpt-period-row select {
+  flex: 1; padding: 10px 12px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--bg2);
+  color: var(--text); font-size: 13.5px; font-weight: 500; outline: none;
+}
+
+.rpt-sched-card {
+  background: var(--green-s); border: 1px solid rgba(5,201,138,0.2);
+  border-radius: var(--r-md); padding: 14px 16px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.rpt-sched-icon { font-size: 24px; flex-shrink: 0; }
+.rpt-sched-text .t { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.rpt-sched-text .s { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.rpt-toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; margin-left: auto; }
+.rpt-toggle input { opacity: 0; width: 0; height: 0; }
+.rpt-slider {
+  position: absolute; inset: 0; background: var(--border2);
+  border-radius: 99px; cursor: pointer; transition: .3s;
+}
+.rpt-slider::before {
+  content: ''; position: absolute; width: 18px; height: 18px;
+  background: #fff; border-radius: 50%; left: 3px; top: 3px;
+  transition: .3s; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.rpt-toggle input:checked + .rpt-slider { background: #25D366; }
+.rpt-toggle input:checked + .rpt-slider::before { transform: translateX(20px); }
+
+/* ── DARK MODE TOKENS ────────────────────────────────── */
+body.dark {
+  --surface:  #161E2E;
+  --bg:       #0D1320;
+  --bg2:      #111929;
+  --border:   #1E2C42;
+  --border2:  #243450;
+  --text:     #EAF0FF;
+  --text2:    #7B90B8;
+  --text3:    #4A5F80;
+  --green-s:  #05190F;
+  --blue-s:   #071530;
+  --red-s:    #1A0808;
+  --orange-s: #1A0E00;
+  --purple-s: #12092A;
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.28);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.18);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.40), 0 1px 4px rgba(0,0,0,0.20);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.28);
+}
+body.dark .bottom-nav {
+  background: rgba(13,19,32,0.97);
+  border-top-color: var(--border);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
+}
+body.dark .page-header {
+  background: var(--surface);
+  border-bottom-color: var(--border);
+}
+body.dark .sheet {
+  background: #131E31;
+  border-top: 1px solid var(--border);
+}
+body.dark .sheet .f-row input,
+body.dark .sheet .f-row select { background: #0D1320; border-color: var(--border); color: var(--text); }
+body.dark .btn-ghost { background: rgba(255,255,255,0.05); border-color: var(--border); color: var(--text2); }
+body.dark .cat-btn   { background: rgba(255,255,255,0.04); border-color: var(--border); color: var(--text2); }
+body.dark .cat-btn.on{ background: rgba(5,201,138,0.15); border-color: var(--g1); color: var(--g1); }
+body.dark .chip      { background: var(--bg2); border-color: var(--border); color: var(--text2); }
+body.dark .chip.on   { background: rgba(5,201,138,0.12); border-color: var(--g1); color: var(--g1); }
+body.dark .rpt-chip  { background: var(--bg2); border-color: var(--border); color: var(--text2); }
+body.dark .rpt-chip.on { background: rgba(37,211,102,0.12); border-color: #25D366; color: #5CF898; }
+body.dark .plan-free { background: var(--bg2); border-color: var(--border); }
+body.dark .plan-trial { background: rgba(249,115,22,0.06); }
+body.dark .pt-urgency { background: rgba(239,68,68,0.08); }
+body.dark .si        { border-bottom-color: var(--border); }
+body.dark .si:active { background: var(--bg2); }
+body.dark .bcat      { background: var(--bg2); border-color: var(--border); }
+body.dark .alert-card{ background: var(--bg2); border-color: var(--border2); }
+body.dark .ac-crit { border-color: rgba(255,77,77,0.3); }
+body.dark .ac-warn { border-color: rgba(255,140,0,0.3); }
+body.dark .alerts-wa-btn { box-shadow:0 4px 16px rgba(37,211,102,.2); }
+body.dark .meta-card { background: var(--bg2); }
+body.dark .add-meta  { background: var(--bg2); border-color: var(--border); }
+body.dark .month-banner,
+body.dark .sec-card  { background: var(--surface); }
+body.dark .prog-track{ background: var(--border); }
+body.dark input[type=range]{ accent-color: var(--g1); }
+/* smooth transition for everything */
+body, body * { transition: background-color .25s ease, border-color .2s ease, color .15s ease, box-shadow .25s ease; }
+/* except animations that shouldn't transition */
+body .ob-logo-icon, body .fab, body .toast { transition: none !important; }
+
+/* ── TOP ACTION BAR (alerta + tema) ──────────────────── */
+#top-actions {
+  position: fixed; top: 14px; right: 16px; z-index: 500;
+  display: flex; align-items: center; gap: 8px;
+}
+.top-action-btn {
+  position: relative;
+  width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+  background: var(--surface); box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  transition: transform .25s cubic-bezier(.22,.68,0,1.5), box-shadow .2s, background .2s !important;
+}
+.top-action-btn:hover  { background: var(--bg2); transform: scale(1.1); }
+.top-action-btn:active { transform: scale(.92); }
+#theme-btn:hover { transform: scale(1.1) rotate(18deg); }
+#top-notif-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--red); border: 2px solid var(--surface);
+  animation: pulse 2s infinite;
+}
+
+/* ── INVESTMENT TIPS ─────────────────────────────────── */
+.inv-scroll {
+  display:flex; gap:12px; overflow-x:auto; padding:0 16px 12px;
+  scroll-snap-type:x mandatory; scrollbar-width:none;
+  cursor:grab; user-select:none;
+}
+.inv-scroll::-webkit-scrollbar { display:none; }
+.inv-scroll.dragging { cursor:grabbing; scroll-snap-type:none; }
+.inv-card {
+  flex-shrink:0; width:200px; border-radius:var(--r-lg); padding:18px 16px;
+  scroll-snap-align:start; cursor:pointer;
+  transition:transform .2s, box-shadow .2s;
+  position:relative; overflow:hidden;
+}
+.inv-card:hover { transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+.inv-card:active { transform:scale(.97); }
+.inv-card-bg {
+  position:absolute; inset:0; opacity:.12;
+  background:radial-gradient(circle at 80% 20%, white, transparent 65%);
+}
+.inv-badge {
+  display:inline-block; font-size:9.5px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.07em; padding:3px 8px; border-radius:99px;
+  background:rgba(255,255,255,0.2); color:rgba(255,255,255,0.9);
+  margin-bottom:12px;
+}
+.inv-em  { font-size:28px; display:block; margin-bottom:8px; }
+.inv-title { font-size:13.5px; font-weight:800; color:#fff; line-height:1.3; margin-bottom:5px; }
+.inv-desc  { font-size:11.5px; color:rgba(255,255,255,0.7); line-height:1.5; }
+
+/* ── GASTOS SUB-NAV ──────────────────────────────────── */
+.gastos-subnav {
+  display:flex; gap:0; padding:0 16px 0; margin-bottom:0;
+  border-bottom:1px solid var(--border); background:var(--surface);
+  position:sticky; top:57px; z-index:40;
+}
+.gsn-tab {
+  flex:1; padding:11px 4px; text-align:center; font-size:13px; font-weight:700;
+  color:var(--text3); border:none; background:none; cursor:pointer;
+  border-bottom:2px solid transparent; transition:all .2s; letter-spacing:.01em;
+}
+.gsn-tab.on { color:var(--g1); border-bottom-color:var(--g1); }
+.gsn-view { display:none; }
+.gsn-view.on { display:block; }
+
+/* ── CREDIT CARDS ────────────────────────────────────── */
+.cc-summary {
+  display:grid; grid-template-columns:1fr 1fr 1fr;
+  gap:1px; background:var(--border); border-radius:var(--r-md);
+  overflow:hidden; margin:16px 16px 0; box-shadow:var(--shadow-xs);
+}
+.cc-sum-cell {
+  background:var(--surface); padding:13px 10px; text-align:center;
+}
+.cc-sum-val { font-size:15px; font-weight:800; color:var(--text); }
+.cc-sum-lbl { font-size:10.5px; color:var(--text3); margin-top:3px; font-weight:600; }
+
+.cc-scroll {
+  display:flex; gap:14px; padding:18px 16px 6px;
+  overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none;
+  cursor:grab; user-select:none;
+}
+.cc-scroll::-webkit-scrollbar { display:none; }
+.cc-scroll.dragging { cursor:grabbing; scroll-snap-type:none; }
+
+.cc-card {
+  flex-shrink:0; width:260px; height:150px; border-radius:18px;
+  padding:18px 20px; scroll-snap-align:start; cursor:pointer;
+  position:relative; overflow:hidden;
+  transition:transform .2s, box-shadow .2s;
+  box-shadow:0 8px 28px rgba(0,0,0,0.18);
+}
+.cc-card:hover { transform:translateY(-4px) scale(1.01); box-shadow:0 16px 40px rgba(0,0,0,0.25); }
+.cc-card:active { transform:scale(.97); }
+.cc-card-shine {
+  position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%, rgba(255,255,255,0.06) 100%);
+}
+.cc-card-chip { font-size:22px; margin-bottom:14px; display:block; }
+.cc-card-num  { font-size:13px; color:rgba(255,255,255,0.7); letter-spacing:.18em; font-weight:600; }
+.cc-card-bot  { display:flex; justify-content:space-between; align-items:flex-end; margin-top:10px; }
+.cc-card-name { font-size:15px; font-weight:800; color:#fff; }
+.cc-card-limit{ font-size:11px; color:rgba(255,255,255,0.6); text-align:right; }
+.cc-card-alert{
+  position:absolute; top:12px; right:14px;
+  background:rgba(255,77,77,0.9); color:#fff; font-size:10px; font-weight:800;
+  padding:2px 8px; border-radius:99px; display:none;
+}
+.cc-card.danger .cc-card-alert { display:block; }
+
+.cc-list { padding:16px 16px 0; }
+.cc-item {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--r-md); padding:14px 16px; margin-bottom:10px;
+  cursor:pointer; transition:all .18s;
+}
+.cc-item:hover { border-color:var(--g1); box-shadow:var(--shadow-sm); transform:translateY(-1px); }
+.cc-item-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.cc-item-dot  { width:14px; height:14px; border-radius:50%; flex-shrink:0; }
+.cc-item-name { font-size:14px; font-weight:700; flex:1; }
+.cc-item-bill { font-size:15px; font-weight:800; color:var(--text); }
+.cc-item-bar  { height:6px; background:var(--border); border-radius:99px; overflow:hidden; margin-bottom:7px; }
+.cc-item-fill { height:100%; border-radius:99px; transition:width .5s ease; }
+.cc-item-meta { display:flex; justify-content:space-between; font-size:11.5px; color:var(--text3); }
+.cc-item-meta span b { color:var(--text2); font-weight:700; }
+
+.cc-add-btn {
+  width:100%; display:flex; align-items:center; gap:12px; padding:15px 16px;
+  border-radius:var(--r-md); border:1.5px dashed var(--border2);
+  background:var(--bg2); cursor:pointer; transition:.2s; margin:4px 0 16px;
+}
+.cc-add-btn:hover { border-color:var(--g1); background:rgba(5,201,138,0.04); }
+.cc-add-icon { width:38px; height:38px; border-radius:10px; background:var(--border);
+  display:flex; align-items:center; justify-content:center; font-size:18px; }
+.cc-add-text .t { font-size:13.5px; font-weight:700; color:var(--text); }
+.cc-add-text .s { font-size:11.5px; color:var(--text3); margin-top:1px; }
+
+/* color picker for card */
+.cc-color-row { display:flex; gap:9px; margin-top:6px; flex-wrap:wrap; }
+.cc-color-swatch {
+  width:28px; height:28px; border-radius:50%; cursor:pointer; border:2px solid transparent;
+  transition:transform .15s, border-color .15s;
+}
+.cc-color-swatch.sel, .cc-color-swatch:hover { transform:scale(1.2); border-color:#fff; outline:2px solid var(--border2); }
+
+/* Detail sheet card preview */
+.cc-detail-header {
+  border-radius:16px; padding:20px 22px; margin-bottom:18px; position:relative; overflow:hidden;
+  box-shadow:0 8px 28px rgba(0,0,0,0.18);
+}
+.cc-detail-stats {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:1px;
+  background:var(--border); border-radius:var(--r-md); overflow:hidden; margin-bottom:16px;
+}
+.cc-detail-stat { background:var(--surface); padding:12px 10px; text-align:center; }
+.cc-detail-stat .v { font-size:14px; font-weight:800; color:var(--text); }
+.cc-detail-stat .l { font-size:10px; color:var(--text3); margin-top:2px; font-weight:600; }
+
+body.dark .cc-item   { background:var(--surface); }
+body.dark .cc-add-btn{ background:var(--bg2); }
+body.dark .cc-sum-cell,.cc-detail-stat { background:var(--surface); }
+
+/* ── SAVINGS CALCULATOR ──────────────────────────────── */
+.calc-btn {
+  width:100%; display:flex; align-items:center; gap:12px; padding:16px 18px;
+  border-radius:var(--r-lg); border:1.5px dashed var(--g1);
+  background:rgba(5,201,138,0.05); cursor:pointer; transition:.2s;
+  margin-bottom:16px;
+}
+.calc-btn:hover { background:rgba(5,201,138,0.10); border-style:solid; }
+.calc-btn-icon { font-size:24px; }
+.calc-btn-text .t { font-size:14px; font-weight:700; color:var(--g1); }
+.calc-btn-text .s { font-size:12px; color:var(--text3); margin-top:2px; }
+
+.calc-result {
+  border-radius:var(--r-md); padding:18px; margin:16px 0 4px;
+  background: linear-gradient(135deg, rgba(5,201,138,0.10) 0%, rgba(61,126,255,0.10) 100%);
+  border:1px solid rgba(5,201,138,0.22); display:none;
+}
+.calc-result.show { display:block; animation:obIn .3s ease; }
+.calc-result-main { text-align:center; padding:8px 0 12px; }
+.calc-result-label { font-size:12px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+.calc-result-val   { font-size:34px; font-weight:900; color:var(--g1); letter-spacing:-1px; }
+.calc-result-sub   { font-size:12.5px; color:var(--text2); margin-top:4px; }
+.calc-breakdown {
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;
+  padding-top:12px; border-top:1px solid rgba(5,201,138,0.15);
+}
+.calc-bk-item { text-align:center; }
+.calc-bk-val  { font-size:15px; font-weight:700; color:var(--text); }
+.calc-bk-lbl  { font-size:11px; color:var(--text3); margin-top:2px; }
+.calc-rate-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.calc-rate-row label { font-size:13px; color:var(--text2); flex:1; }
+.calc-rate-toggle { display:flex; align-items:center; gap:8px; }
+.calc-rate-toggle select {
+  padding:7px 10px; border-radius:9px; border:1.5px solid var(--border);
+  background:var(--bg2); color:var(--text); font-size:13px; outline:none;
+}
+body.dark .calc-result { background:rgba(5,201,138,0.07); }
+body.dark .calc-btn { background:rgba(5,201,138,0.05); }
+</style>
+</head>
+<body>
+
+<!-- ═══ ONBOARDING ══════════════════════════════════ -->
+<div id="onboarding">
+  <div class="ob-orb ob-orb-1"></div>
+  <div class="ob-orb ob-orb-2"></div>
+  <div class="ob-wrap">
+    <div class="ob-logo">
+      <div class="ob-logo-icon">
+        <!-- 3 barras ascendentes cheias — bold, geométrico, legível em qualquer tamanho -->
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2"  y="20" width="8" height="10" rx="2.5" fill="white" opacity="0.55"/>
+          <rect x="12" y="12" width="8" height="18" rx="2.5" fill="white" opacity="0.8"/>
+          <rect x="22" y="4"  width="8" height="26" rx="2.5" fill="white"/>
+          <!-- Seta minimalista acima da barra mais alta -->
+          <path d="M26 2.5 L28.5 0 L31 2.5"
+                stroke="white" stroke-width="1.6"
+                stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        </svg>
+      </div>
+      <h1>SalaryMan</h1>
+      <p>Controle financeiro para quem vive de salário</p>
+    </div>
+    <div class="ob-card">
+      <div class="ob-progress">
+        <span id="op1" class="act"></span><span id="op2"></span><span id="op3"></span><span id="op4"></span><span id="op5"></span>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="ob-step active" id="os1">
+        <div class="ob-icon">👋</div>
+        <h2>Bem-vindo!</h2>
+        <p>Entre na sua conta ou crie uma nova em segundos.</p>
+
+        <!-- ── GOOGLE USER CARD (aparece após login Google) ── -->
+        <div class="google-user-card" id="guc">
+          <div class="guc-avatar-fallback" id="guc-av">M</div>
+          <div class="guc-info">
+            <div class="guc-name" id="guc-name">Mateus Gabriel</div>
+            <div class="guc-email" id="guc-email">mateus@email.com</div>
+          </div>
+          <span class="guc-check">✅</span>
+        </div>
+
+        <!-- ── BOTÃO GOOGLE — renderizado pelo GIS ── -->
+        <!--
+          O GIS injeta um <iframe> aqui com o botão oficial do Google.
+          theme="filled_black" combina com o fundo escuro do onboarding.
+          O botão é renderizado na função initGoogleSignIn() abaixo.
+        -->
+        <div id="google-btn-wrap">
+          <div class="gis-loading" id="gis-placeholder">Carregando login com Google…</div>
+        </div>
+
+
+        <div class="ob-divider">ou use seu e-mail</div>
+        <div class="ob-field"><label>E-mail</label><input class="ob-input" type="email" placeholder="seu@email.com" id="ob-email"></div>
+        <div class="ob-field"><label>Senha</label><input class="ob-input" type="password" placeholder="••••••••" id="ob-pass"></div>
+        <button class="ob-btn" onclick="loginEmail()">Criar conta grátis →</button>
+        <div class="ob-link">Já tem conta? <a onclick="loginEmail()">Entrar</a></div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="ob-step" id="os2">
+        <div class="ob-icon">💵</div>
+        <h2>Qual é o seu salário?</h2>
+        <p>Vamos calcular exatamente quanto você pode gastar por dia.</p>
+        <div class="ob-field"><label>Salário líquido</label>
+          <div class="ob-pfx"><span class="pfx">R$</span><input class="ob-input" id="ob-sal" type="number" placeholder="0,00" value="4500" oninput="updOb()"></div>
+        </div>
+        <div class="ob-field">
+          <label>Data de recebimento</label>
+          <div class="ob-select">
+            <div class="ob-sel-trigger" id="payday-trigger" onclick="toggleObSel(this)">
+              <span id="payday-label">📅 Dia 30</span>
+              <span class="ob-sel-arrow">▼</span>
+            </div>
+            <div class="ob-sel-menu" id="payday-menu" style="max-height:220px;overflow-y:auto">
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 1')">📅 Dia 1<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 2')">📅 Dia 2<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 3')">📅 Dia 3<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 4')">📅 Dia 4<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 5')">📅 Dia 5<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 6')">📅 Dia 6<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 7')">📅 Dia 7<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 8')">📅 Dia 8<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 9')">📅 Dia 9<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 10')">📅 Dia 10<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 11')">📅 Dia 11<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 12')">📅 Dia 12<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 13')">📅 Dia 13<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 14')">📅 Dia 14<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 15')">📅 Dia 15<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 16')">📅 Dia 16<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 17')">📅 Dia 17<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 18')">📅 Dia 18<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 19')">📅 Dia 19<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 20')">📅 Dia 20<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 21')">📅 Dia 21<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 22')">📅 Dia 22<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 23')">📅 Dia 23<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 24')">📅 Dia 24<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 25')">📅 Dia 25<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 26')">📅 Dia 26<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 27')">📅 Dia 27<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 28')">📅 Dia 28<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 29')">📅 Dia 29<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt active" onclick="pickObSel(this,'📅 Dia 30')">📅 Dia 30<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Dia 31')">📅 Dia 31<span class="ob-sel-check">✓</span></div>
+              <div class="ob-sel-opt" onclick="pickObSel(this,'📅 Último dia do mês')">📅 Último dia do mês<span class="ob-sel-check">✓</span></div>
+            </div>
+          </div>
+        </div>
+        <button class="ob-btn" onclick="goOb(3)">Próximo →</button>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="ob-step" id="os3">
+        <div class="ob-icon">🏠</div>
+        <h2>Gastos fixos</h2>
+        <p>Adicione as contas que você paga todo mês.</p>
+        <div class="fixed-list" id="fl">
+          <div class="fixed-item">
+            <input class="ob-input" placeholder="Aluguel" style="flex:1.5">
+            <div class="ob-pfx" style="flex:1"><span class="pfx">R$</span><input class="ob-input" type="number" placeholder="0"></div>
+            <button class="del-btn" onclick="this.parentElement.remove()">×</button>
+          </div>
+          <div class="fixed-item">
+            <input class="ob-input" placeholder="Internet" style="flex:1.5">
+            <div class="ob-pfx" style="flex:1"><span class="pfx">R$</span><input class="ob-input" type="number" placeholder="0"></div>
+            <button class="del-btn" onclick="this.parentElement.remove()">×</button>
+          </div>
+        </div>
+        <button class="add-fixed" onclick="addFix()">+ Adicionar conta fixa</button>
+        <button class="ob-btn" onclick="goOb(4)">Próximo →</button>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="ob-step" id="os4">
+        <div class="ob-icon">🎯</div>
+        <h2>Divisão do dinheiro</h2>
+        <p>Regra 50/30/20 — ajuste como quiser.</p>
+        <div class="budget-sliders">
+          <div class="bs-item">
+            <div class="bs-row">
+              <div class="bs-name">🏠 Essenciais</div>
+              <div class="bs-right"><div class="bs-pct" style="color:#7BAAFF">50%</div><div class="bs-val" id="ob-e">R$ 2.250</div></div>
+            </div>
+            <div class="bs-bar"><div class="bs-bar-fill" style="width:50%;background:#4F7FFF"></div></div>
+          </div>
+          <div class="bs-item">
+            <div class="bs-row">
+              <div class="bs-name">🎉 Lazer</div>
+              <div class="bs-right"><div class="bs-pct" style="color:#00E8B0">30%</div><div class="bs-val" id="ob-l">R$ 1.350</div></div>
+            </div>
+            <div class="bs-bar"><div class="bs-bar-fill" style="width:30%;background:#05C98A"></div></div>
+          </div>
+          <div class="bs-item">
+            <div class="bs-row">
+              <div class="bs-name">💎 Economia</div>
+              <div class="bs-right"><div class="bs-pct" style="color:#C4A5FF">20%</div><div class="bs-val" id="ob-s">R$ 900</div></div>
+            </div>
+            <div class="bs-bar"><div class="bs-bar-fill" style="width:20%;background:#9B6DFF"></div></div>
+          </div>
+        </div>
+        <button class="ob-btn" onclick="goOb(5)">Próximo →</button>
+      </div>
+
+      <!-- Step 5 — WhatsApp -->
+      <div class="ob-step" id="os5">
+        <div class="ob-icon">📲</div>
+        <h2>Relatórios no WhatsApp</h2>
+        <p>Receba resumos automáticos dos seus gastos direto no WhatsApp. Você pode pular e configurar depois.</p>
+
+        <div class="ob-field">
+          <label>Número do WhatsApp</label>
+          <div class="ob-pfx">
+            <span class="pfx" style="font-size:15px">🇧🇷</span>
+            <input class="ob-input" type="tel" id="ob-phone" placeholder="(11) 9 9999-9999"
+              style="padding-left:34px"
+              oninput="
+                let v=this.value.replace(/\D/g,'');
+                if(v.length<=2) v=v.replace(/^(\d{0,2})/,'($1');
+                else if(v.length<=7) v=v.replace(/^(\d{2})(\d{0,5})/,'($1) $2');
+                else v=v.replace(/^(\d{2})(\d{1})(\d{0,4})(\d{0,4})/,'($1) $2 $3-$4');
+                this.value=v.replace(/-$/,'');
+              ">
+          </div>
+        </div>
+
+        <!-- Frequência de envio -->
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,0.38);display:block;margin-bottom:10px">Frequência dos relatórios</label>
+        <div class="ob-freq-grid">
+          <div id="obf-diario" class="ob-freq-chip" onclick="pickObFreq('diario')">
+            <div class="ob-freq-check">✓</div>
+            <span class="ob-freq-em">📅</span>
+            <span class="ob-freq-name">Diário</span>
+            <span class="ob-freq-desc">Todo dia às 21h</span>
+          </div>
+          <div id="obf-semanal" class="ob-freq-chip" onclick="pickObFreq('semanal')">
+            <div class="ob-freq-check">✓</div>
+            <span class="ob-freq-em">📊</span>
+            <span class="ob-freq-name">Semanal</span>
+            <span class="ob-freq-desc">Todo domingo</span>
+          </div>
+          <div id="obf-10dias" class="ob-freq-chip on" onclick="pickObFreq('10dias')">
+            <div class="ob-freq-check">✓</div>
+            <span class="ob-freq-em">🔟</span>
+            <span class="ob-freq-name">10 dias</span>
+            <span class="ob-freq-desc">Recomendado</span>
+          </div>
+          <div id="obf-mensal" class="ob-freq-chip" onclick="pickObFreq('mensal')">
+            <div class="ob-freq-check">✓</div>
+            <span class="ob-freq-em">📆</span>
+            <span class="ob-freq-name">Mensal</span>
+            <span class="ob-freq-desc">Todo dia 1º</span>
+          </div>
+        </div>
+
+        <button class="ob-btn" onclick="obSavePhone()">Começar a controlar! 🚀</button>
+        <button style="width:100%;padding:12px;background:none;border:none;color:rgba(255,255,255,0.35);font-size:13px;cursor:pointer;margin-top:6px" onclick="enterApp()">Pular por agora →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═════════════════════════════════════════ -->
+<div id="app">
+  <!-- Top action bar: alertas + tema -->
+  <div id="top-actions">
+    <button class="top-action-btn" onclick="goTab('alertas',null)" title="Alertas">
+      🔔<span id="top-notif-dot"></span>
+    </button>
+    <button id="theme-btn" class="top-action-btn" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-tab active" onclick="goTab('home',this)"><span class="tab-icon">🏠</span><span class="tab-label">Início</span></button>
+    <button class="nav-tab" onclick="goTab('gastos',this)"><span class="tab-icon">💳</span><span class="tab-label">Gastos</span></button>
+    <button class="nav-tab" onclick="goTab('orcamento',this)"><span class="tab-icon">📊</span><span class="tab-label">Orçamento</span></button>
+    <button class="nav-tab" onclick="goTab('metas',this)"><span class="tab-icon">🎯</span><span class="tab-label">Metas</span></button>
+    <button class="nav-tab" onclick="goTab('perfil',this)"><span class="tab-icon">👤</span><span class="tab-label">Perfil</span></button>
+  </nav>
+  <button class="fab" onclick="openSheet('addExp')" title="Adicionar gasto">+</button>
+
+  <!-- ── HOME ──────────────────────────────────────── -->
+  <div class="screen active" id="tab-home">
+    <div class="home-header">
+      <div><div class="greeting">Olá, Mateus 👋</div><div class="month">Março de 2026</div></div>
+    </div>
+
+    <!-- Daily hero -->
+    <div class="daily-hero">
+      <div class="dh-glow-1"></div><div class="dh-glow-2"></div>
+      <div class="dh-inner">
+        <div class="dh-label">Você pode gastar hoje</div>
+        <div class="dh-amount" id="daily-num">
+          <span class="currency">R$</span><span id="daily-int">87</span><span class="cents">,50</span>
+        </div>
+        <div class="dh-sub">Faltam <strong>8 dias</strong> até o salário · 23 de Março</div>
+        <div class="dh-stats">
+          <div class="dh-stat"><div class="sv" style="color:#7BAAFF">R$ 4.500</div><div class="sl">Salário</div></div>
+          <div class="dh-stat"><div class="sv" style="color:#FF7070" id="h-spent">R$ 2.843</div><div class="sl">Gasto</div></div>
+          <div class="dh-stat"><div class="sv" style="color:#00E8B0" id="h-left">R$ 1.657</div><div class="sl">Restante</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert -->
+    <div class="alert-banner ab-warn" onclick="goTab('alertas',null)">
+      <div class="ab-icon-wrap"><span class="ab-icon">⚠️</span></div>
+      <div class="ab-content">
+        <div class="ab-title">Lazer acima do esperado</div>
+        <div class="ab-text">Você já usou 78% do orçamento de lazer. Faltam 8 dias e há R$&nbsp;297 disponíveis.</div>
+      </div>
+      <span class="ab-arrow">›</span>
+    </div>
+
+    <!-- Gauge -->
+    <div class="gauge-card card">
+      <div class="gauge-inner">
+        <div class="gauge-top">
+          <div><div class="gauge-title">Progresso do mês</div><div class="gauge-sub">23 de 31 dias passados</div></div>
+          <span class="badge bg-orange">63% gasto</span>
+        </div>
+        <div class="gauge-track">
+          <div class="gauge-fill" id="gauge-bar" style="width:0%"></div>
+          <div class="gauge-marker" style="left:74%"></div>
+        </div>
+        <div class="gauge-lbs">
+          <span>1 Mar</span><span style="color:var(--orange);font-weight:700">Hoje (74% do mês)</span><span>31 Mar</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div style="padding:16px 16px 8px" class="sec-label">
+      Categorias <a onclick="goTab('orcamento',null)">Ver tudo</a>
+    </div>
+    <div class="cat-scroll" style="margin-bottom:16px">
+      <div class="cat-pill">
+        <div class="cp-icon" style="background:#FFF3E0">🍔</div>
+        <span class="cp-name">Alimentação</span><span class="cp-val">R$ 620</span>
+        <div class="cp-bar"><div class="cp-prog" style="width:62%;background:var(--orange)"></div></div>
+      </div>
+      <div class="cat-pill">
+        <div class="cp-icon" style="background:var(--blue-s)">🚗</div>
+        <span class="cp-name">Transporte</span><span class="cp-val">R$ 280</span>
+        <div class="cp-bar"><div class="cp-prog" style="width:40%;background:var(--g2)"></div></div>
+      </div>
+      <div class="cat-pill">
+        <div class="cp-icon" style="background:var(--purple-s)">🎬</div>
+        <span class="cp-name">Lazer</span><span class="cp-val">R$ 418</span>
+        <div class="cp-bar"><div class="cp-prog" style="width:78%;background:var(--red)"></div></div>
+      </div>
+      <div class="cat-pill">
+        <div class="cp-icon" style="background:var(--green-s)">🏠</div>
+        <span class="cp-name">Moradia</span><span class="cp-val">R$ 1.200</span>
+        <div class="cp-bar"><div class="cp-prog" style="width:100%;background:var(--g1)"></div></div>
+      </div>
+      <div class="cat-pill">
+        <div class="cp-icon" style="background:var(--purple-s)">🏥</div>
+        <span class="cp-name">Saúde</span><span class="cp-val">R$ 150</span>
+        <div class="cp-bar"><div class="cp-prog" style="width:30%;background:var(--purple)"></div></div>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div class="section">
+      <div class="sec-label">Últimos gastos <a onclick="goTab('gastos',null)">Ver todos</a></div>
+      <div class="card exp-list" style="overflow:hidden">
+        <div class="exp-item"><div class="ei-icon" style="background:#FFF3E0">🍕</div><div class="ei-info"><div class="ei-name">iFood — Pizza</div><div class="ei-cat">🍔 Alimentação</div></div><div class="ei-right"><div class="ei-amount">−R$ 42,90</div><div class="ei-date">Hoje, 19:34</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--blue-s)">🚌</div><div class="ei-info"><div class="ei-name">Uber — Trabalho</div><div class="ei-cat">🚗 Transporte</div></div><div class="ei-right"><div class="ei-amount">−R$ 18,50</div><div class="ei-date">Hoje, 08:12</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--purple-s)">🎬</div><div class="ei-info"><div class="ei-name">Netflix</div><div class="ei-cat">🎬 Lazer</div></div><div class="ei-right"><div class="ei-amount">−R$ 39,90</div><div class="ei-date">22 Mar</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--green-s)">🏠</div><div class="ei-info"><div class="ei-name">Aluguel</div><div class="ei-cat">🏠 Moradia</div></div><div class="ei-right"><div class="ei-amount">−R$ 1.200</div><div class="ei-date">01 Mar</div></div></div>
+      </div>
+    </div>
+
+    <!-- Investment Tips -->
+    <div class="sec-label" style="padding:8px 16px 10px">💡 Dicas de investimento</div>
+    <div class="inv-scroll" id="invScroll">
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#0F6E4F,#05C98A)" onclick="openSheet('invTip1')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">🌱 Iniciante</span>
+        <span class="inv-em">🏦</span>
+        <div class="inv-title">Reserva de Emergência</div>
+        <div class="inv-desc">Guarde 3–6 meses de gastos antes de qualquer investimento.</div>
+      </div>
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#1A4A8A,#3D7EFF)" onclick="openSheet('invTip2')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">🌱 Iniciante</span>
+        <span class="inv-em">🏛️</span>
+        <div class="inv-title">Tesouro Direto Selic</div>
+        <div class="inv-desc">Segurança do governo + liquidez diária. Ideal para quem está começando.</div>
+      </div>
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#6B2F8A,#9B6DFF)" onclick="openSheet('invTip3')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">🌿 Moderado</span>
+        <span class="inv-em">📄</span>
+        <div class="inv-title">CDB com Liquidez</div>
+        <div class="inv-desc">Rende acima da poupança e tem proteção do FGC até R$ 250 mil.</div>
+      </div>
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#8A4A00,#FF8C00)" onclick="openSheet('invTip4')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">🌿 Moderado</span>
+        <span class="inv-em">📊</span>
+        <div class="inv-title">Fundos de Índice (ETF)</div>
+        <div class="inv-desc">Diversifique a Bolsa inteira com um único produto. Baixo custo.</div>
+      </div>
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#1A1A2E,#E94560)" onclick="openSheet('invTip5')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">🚀 Avançado</span>
+        <span class="inv-em">📈</span>
+        <div class="inv-title">Ações & FIIs</div>
+        <div class="inv-desc">Maior potencial de retorno a longo prazo. Exige estudo e paciência.</div>
+      </div>
+
+      <div class="inv-card" style="background:linear-gradient(135deg,#004D40,#00BFA5)" onclick="openSheet('invTip6')">
+        <div class="inv-card-bg"></div>
+        <span class="inv-badge">✅ Regra</span>
+        <span class="inv-em">⚖️</span>
+        <div class="inv-title">Regra 50/30/20</div>
+        <div class="inv-desc">20% do salário sempre para investimentos. Automatize isso no app.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── GASTOS ─────────────────────────────────────── -->
+  <div class="screen" id="tab-gastos">
+    <div class="page-header"><h1>Gastos</h1><p>Histórico completo de março</p></div>
+
+    <!-- Sub-nav: Transações / Cartões -->
+    <div class="gastos-subnav">
+      <button class="gsn-tab on" onclick="switchGastosTab('transacoes',this)">📋 Transações</button>
+      <button class="gsn-tab"    onclick="switchGastosTab('cartoes',this)">💳 Cartões</button>
+    </div>
+
+    <!-- ── TRANSAÇÕES sub-view ── -->
+    <div class="gsn-view on" id="gsv-transacoes">
+    <div class="month-banner">
+      <div class="mb-inner">
+        <div class="mb-top">
+          <div><div class="mb-label">Total gasto</div><div class="mb-val">R$ 2.843</div></div>
+          <div class="mb-budget"><div class="mb-label">Orçamento</div><div class="mb-val">R$ 4.500</div></div>
+        </div>
+        <div class="mb-prog-track"><div class="mb-prog-fill" style="width:63%"></div></div>
+        <div class="mb-stats">
+          <div class="mb-stat"><div class="sv">42</div><div class="sl">Transações</div></div>
+          <div class="mb-stat"><div class="sv">R$ 67,70</div><div class="sl">Média/dia</div></div>
+          <div class="mb-stat"><div class="sv">R$ 1.657</div><div class="sl">Restante</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="sec-label">Por categoria</div>
+      <div class="card"><div style="padding:18px"><div style="height:200px;position:relative"><canvas id="chartCat"></canvas></div></div></div>
+    </div>
+    <div class="cat-chips">
+      <div class="chip on">Todos</div>
+      <div class="chip" onclick="filterChip(this)">🍔 Alimentação</div>
+      <div class="chip" onclick="filterChip(this)">🚗 Transporte</div>
+      <div class="chip" onclick="filterChip(this)">🎬 Lazer</div>
+      <div class="chip" onclick="filterChip(this)">🏠 Moradia</div>
+      <div class="chip" onclick="filterChip(this)">🏥 Saúde</div>
+    </div>
+    <div class="section">
+      <div class="sec-label">Março 2026</div>
+      <div class="card exp-list" style="overflow:hidden">
+        <div class="exp-item"><div class="ei-icon" style="background:#FFF3E0">🍕</div><div class="ei-info"><div class="ei-name">iFood — Pizza</div><div class="ei-cat">🍔 Alimentação · Hoje</div></div><div class="ei-right"><div class="ei-amount">−R$ 42,90</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--blue-s)">🚌</div><div class="ei-info"><div class="ei-name">Uber — Trabalho</div><div class="ei-cat">🚗 Transporte · Hoje</div></div><div class="ei-right"><div class="ei-amount">−R$ 18,50</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--purple-s)">🎮</div><div class="ei-info"><div class="ei-name">Xbox Game Pass</div><div class="ei-cat">🎬 Lazer · 22 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 34,90</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:#FFF3E0">☕</div><div class="ei-info"><div class="ei-name">Starbucks</div><div class="ei-cat">🍔 Alimentação · 22 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 28,00</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--purple-s)">🎬</div><div class="ei-info"><div class="ei-name">Netflix</div><div class="ei-cat">🎬 Lazer · 22 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 39,90</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--blue-s)">⛽</div><div class="ei-info"><div class="ei-name">Posto Shell</div><div class="ei-cat">🚗 Transporte · 21 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 120,00</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--green-s)">🛒</div><div class="ei-info"><div class="ei-name">Supermercado Extra</div><div class="ei-cat">🍔 Alimentação · 20 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 218,40</div></div></div>
+        <div class="exp-item"><div class="ei-icon" style="background:var(--purple-s)">🏋️</div><div class="ei-info"><div class="ei-name">Smart Fit</div><div class="ei-cat">🏥 Saúde · 15 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 89,90</div></div></div>
+      </div>
+    </div>
+    </div><!-- /gsv-transacoes -->
+
+    <!-- ── CARTÕES sub-view ── -->
+    <div class="gsn-view" id="gsv-cartoes">
+
+      <!-- Summary bar -->
+      <div class="cc-summary">
+        <div class="cc-sum-cell"><div class="cc-sum-val" id="cc-total-bill">R$ 3.079</div><div class="cc-sum-lbl">Total faturas</div></div>
+        <div class="cc-sum-cell"><div class="cc-sum-val" id="cc-total-limit">R$ 10.000</div><div class="cc-sum-lbl">Limite total</div></div>
+        <div class="cc-sum-cell"><div class="cc-sum-val" style="color:var(--g1)" id="cc-total-avail">R$ 6.921</div><div class="cc-sum-lbl">Disponível</div></div>
+      </div>
+
+      <!-- Card visuals carousel -->
+      <div class="cc-scroll" id="ccScroll">
+        <div class="cc-card" style="background:linear-gradient(135deg,#6D28D9,#8B5CF6)" onclick="openCardDetail('nubank')">
+          <div class="cc-card-shine"></div>
+          <span class="cc-card-chip">💜</span>
+          <div class="cc-card-num">•••• •••• •••• 4242</div>
+          <div class="cc-card-bot">
+            <div class="cc-card-name">Nubank</div>
+            <div class="cc-card-limit">R$ 1.847 / R$ 5.000<br><span style="font-size:10px;opacity:.7">Fecha dia 3 · Vence dia 10</span></div>
+          </div>
+        </div>
+        <div class="cc-card danger" style="background:linear-gradient(135deg,#C2410C,#F97316)" onclick="openCardDetail('itau')">
+          <div class="cc-card-shine"></div>
+          <div class="cc-card-alert">⚠ 89%</div>
+          <span class="cc-card-chip">🧡</span>
+          <div class="cc-card-num">•••• •••• •••• 7891</div>
+          <div class="cc-card-bot">
+            <div class="cc-card-name">Itaú</div>
+            <div class="cc-card-limit">R$ 892 / R$ 1.000<br><span style="font-size:10px;opacity:.7">Fecha dia 20 · Vence dia 27</span></div>
+          </div>
+        </div>
+        <div class="cc-card" style="background:linear-gradient(135deg,#065F46,#059669)" onclick="openCardDetail('inter')">
+          <div class="cc-card-shine"></div>
+          <span class="cc-card-chip">💚</span>
+          <div class="cc-card-num">•••• •••• •••• 1234</div>
+          <div class="cc-card-bot">
+            <div class="cc-card-name">Inter</div>
+            <div class="cc-card-limit">R$ 340 / R$ 4.000<br><span style="font-size:10px;opacity:.7">Fecha dia 15 · Vence dia 22</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cards list -->
+      <div class="cc-list">
+        <div class="sec-label" style="margin-bottom:12px">Detalhes por cartão</div>
+
+        <!-- Nubank -->
+        <div class="cc-item" onclick="openCardDetail('nubank')">
+          <div class="cc-item-top">
+            <div class="cc-item-dot" style="background:#8B5CF6"></div>
+            <div class="cc-item-name">Nubank <span style="font-weight:400;color:var(--text3);font-size:12px">••4242</span></div>
+            <div class="cc-item-bill">R$ 1.847</div>
+          </div>
+          <div class="cc-item-bar"><div class="cc-item-fill" style="width:37%;background:#8B5CF6"></div></div>
+          <div class="cc-item-meta">
+            <span>37% do limite usado</span>
+            <span>Fecha <b>dia 3</b> · Vence <b>dia 10</b></span>
+          </div>
+        </div>
+
+        <!-- Itaú -->
+        <div class="cc-item" onclick="openCardDetail('itau')">
+          <div class="cc-item-top">
+            <div class="cc-item-dot" style="background:#F97316"></div>
+            <div class="cc-item-name">Itaú <span style="font-weight:400;color:var(--text3);font-size:12px">••7891</span></div>
+            <div class="cc-item-bill" style="color:var(--red)">R$ 892</div>
+          </div>
+          <div class="cc-item-bar"><div class="cc-item-fill" style="width:89%;background:var(--red)"></div></div>
+          <div class="cc-item-meta">
+            <span style="color:var(--red);font-weight:700">⚠ 89% do limite — atenção!</span>
+            <span>Fecha <b>dia 20</b> · Vence <b>dia 27</b></span>
+          </div>
+        </div>
+
+        <!-- Inter -->
+        <div class="cc-item" onclick="openCardDetail('inter')">
+          <div class="cc-item-top">
+            <div class="cc-item-dot" style="background:#059669"></div>
+            <div class="cc-item-name">Inter <span style="font-weight:400;color:var(--text3);font-size:12px">••1234</span></div>
+            <div class="cc-item-bill" style="color:var(--g1)">R$ 340</div>
+          </div>
+          <div class="cc-item-bar"><div class="cc-item-fill" style="width:9%;background:var(--g1)"></div></div>
+          <div class="cc-item-meta">
+            <span style="color:var(--g1)">✓ 9% do limite — saudável</span>
+            <span>Fecha <b>dia 15</b> · Vence <b>dia 22</b></span>
+          </div>
+        </div>
+
+        <!-- Add card button -->
+        <button class="cc-add-btn" onclick="openSheet('addCardSheet')">
+          <div class="cc-add-icon">＋</div>
+          <div class="cc-add-text">
+            <div class="t">Adicionar cartão</div>
+            <div class="s">Cadastre um novo cartão de crédito</div>
+          </div>
+        </button>
+      </div>
+    </div><!-- /gsv-cartoes -->
+
+  </div>
+
+  <!-- ── ORÇAMENTO ──────────────────────────────────── -->
+  <div class="screen" id="tab-orcamento">
+    <div class="page-header"><h1>Orçamento</h1><p>Divisão do seu salário</p></div>
+    <div class="budget-hero">
+      <div class="bh-top">
+        <div class="bh-lbl">Salário disponível</div>
+        <div class="bh-amount">R$ 4.500</div>
+        <div class="bh-sub">Fixos: R$ 1.320 · Livre: R$ 3.180</div>
+      </div>
+      <div class="bh-grid">
+        <div class="bh-cell bh-e"><div class="bv">R$ 2.250</div><div class="bl">Essenciais 50%</div></div>
+        <div class="bh-cell bh-l"><div class="bv">R$ 1.350</div><div class="bl">Lazer 30%</div></div>
+        <div class="bh-cell bh-s"><div class="bv">R$ 900</div><div class="bl">Economia 20%</div></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="card" style="overflow:hidden">
+        <!-- Essenciais -->
+        <div class="bcat">
+          <div class="bcat-head">
+            <div class="bcat-icon" style="background:var(--blue-s)">🏠</div>
+            <div><div class="bcat-title">Essenciais</div><div class="bcat-pct">50% do salário · R$ 2.250</div></div>
+            <div style="margin-left:auto"><span class="badge bg-blue">82% usado</span></div>
+          </div>
+          <div class="bcat-nums"><div class="bcat-spent" style="color:var(--g2)">R$ 1.843</div><div class="bcat-of">de R$ 2.250</div></div>
+          <div class="bcat-track prog-track" style="height:8px"><div class="prog-fill bcat-fill" style="width:82%;background:var(--g2);height:8px;box-shadow:0 0 8px rgba(61,126,255,.35)"></div></div>
+          <div class="bcat-pct-note" style="color:var(--g2)">Restam R$ 407</div>
+          <div class="bcat-subs">
+            <div class="bcat-sub"><span class="sn">🏠 Aluguel</span><span class="sv" style="color:var(--red)">R$ 1.200</span></div>
+            <div class="bcat-sub"><span class="sn">💡 Luz</span><span class="sv" style="color:var(--red)">R$ 180</span></div>
+            <div class="bcat-sub"><span class="sn">🌐 Internet</span><span class="sv" style="color:var(--red)">R$ 120</span></div>
+            <div class="bcat-sub"><span class="sn">🍔 Alimentação</span><span class="sv">R$ 343</span></div>
+          </div>
+          <div class="pct-row"><label>Ajustar %</label><input type="range" min="30" max="70" value="50" oninput="adjPct(this,'pe')"><span id="pe">50%</span></div>
+        </div>
+        <!-- Lazer -->
+        <div class="bcat">
+          <div class="bcat-head">
+            <div class="bcat-icon" style="background:var(--green-s)">🎉</div>
+            <div><div class="bcat-title">Lazer</div><div class="bcat-pct">30% do salário · R$ 1.350</div></div>
+            <div style="margin-left:auto"><span class="badge bg-orange">⚠ 78%</span></div>
+          </div>
+          <div class="bcat-nums"><div class="bcat-spent" style="color:var(--orange)">R$ 1.053</div><div class="bcat-of">de R$ 1.350</div></div>
+          <div class="bcat-track prog-track" style="height:8px"><div class="prog-fill" style="width:78%;background:var(--orange);height:8px;box-shadow:0 0 8px rgba(255,140,0,.3)"></div></div>
+          <div class="bcat-pct-note" style="color:var(--orange)">⚠ Restam apenas R$ 297</div>
+          <div class="bcat-subs">
+            <div class="bcat-sub"><span class="sn">🎬 Streaming</span><span class="sv">R$ 119</span></div>
+            <div class="bcat-sub"><span class="sn">🍕 Restaurantes</span><span class="sv">R$ 420</span></div>
+            <div class="bcat-sub"><span class="sn">🎮 Games</span><span class="sv">R$ 79</span></div>
+            <div class="bcat-sub"><span class="sn">🛍️ Compras</span><span class="sv">R$ 435</span></div>
+          </div>
+          <div class="pct-row"><label>Ajustar %</label><input type="range" min="10" max="50" value="30" oninput="adjPct(this,'pl')"><span id="pl">30%</span></div>
+        </div>
+        <!-- Economia -->
+        <div class="bcat">
+          <div class="bcat-head">
+            <div class="bcat-icon" style="background:var(--purple-s)">💎</div>
+            <div><div class="bcat-title">Economia</div><div class="bcat-pct">20% do salário · R$ 900</div></div>
+            <div style="margin-left:auto"><span class="badge bg-green">✓ 100%</span></div>
+          </div>
+          <div class="bcat-nums"><div class="bcat-spent" style="color:var(--g1)">R$ 900</div><div class="bcat-of">de R$ 900</div></div>
+          <div class="bcat-track prog-track" style="height:8px"><div class="prog-fill" style="width:100%;background:var(--g1);height:8px;box-shadow:0 0 8px rgba(5,201,138,.4)"></div></div>
+          <div class="bcat-pct-note" style="color:var(--g1)">🎉 Meta mensal atingida!</div>
+          <div class="bcat-subs">
+            <div class="bcat-sub"><span class="sn">💰 Reserva de emergência</span><span class="sv" style="color:var(--g1)">R$ 600</span></div>
+            <div class="bcat-sub"><span class="sn">📈 Investimento</span><span class="sv" style="color:var(--g1)">R$ 300</span></div>
+          </div>
+          <div class="pct-row"><label>Ajustar %</label><input type="range" min="5" max="40" value="20" oninput="adjPct(this,'ps')"><span id="ps">20%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── METAS ──────────────────────────────────────── -->
+  <div class="screen" id="tab-metas">
+    <div class="page-header"><h1>Metas</h1><p>Economize com propósito</p></div>
+    <div style="padding:16px 16px 0">
+
+      <div class="card meta-card">
+        <div class="meta-head">
+          <div class="meta-ico" style="background:var(--blue-s)">📱</div>
+          <div class="meta-info"><div class="mn">iPhone 15 Pro</div><div class="ms">R$ 300/mês guardados</div></div>
+          <span class="badge bg-blue" style="margin-left:auto">3 meses</span>
+        </div>
+        <div class="meta-body">
+          <div class="meta-nums"><div class="meta-saved" style="color:var(--g2)">R$ 2.100</div><div class="meta-target">de R$ 7.000</div></div>
+          <div class="meta-track"><div class="meta-fill" style="width:30%;background:var(--g2)"></div></div>
+          <div class="meta-foot"><div class="meta-date">📅 Previsão: Dez/2026</div><div class="meta-pct" style="color:var(--g2)">30%</div></div>
+          <div class="meta-actions"><button class="btn btn-primary btn-sm" onclick="toast('💰 Valor adicionado!','ok')">+ Adicionar</button><button class="btn btn-ghost btn-sm">Editar</button></div>
+        </div>
+      </div>
+
+      <div class="card meta-card">
+        <div class="meta-head">
+          <div class="meta-ico" style="background:var(--green-s)">✈️</div>
+          <div class="meta-info"><div class="mn">Viagem — Florianópolis</div><div class="ms">R$ 200/mês guardados</div></div>
+          <span class="badge bg-green" style="margin-left:auto">2 meses</span>
+        </div>
+        <div class="meta-body">
+          <div class="meta-nums"><div class="meta-saved" style="color:var(--g1)">R$ 1.600</div><div class="meta-target">de R$ 3.000</div></div>
+          <div class="meta-track"><div class="meta-fill" style="width:53%;background:var(--g1)"></div></div>
+          <div class="meta-foot"><div class="meta-date">📅 Previsão: Jul/2026</div><div class="meta-pct" style="color:var(--g1)">53%</div></div>
+          <div class="meta-actions"><button class="btn btn-primary btn-sm" onclick="toast('💰 Valor adicionado!','ok')">+ Adicionar</button><button class="btn btn-ghost btn-sm">Editar</button></div>
+        </div>
+      </div>
+
+      <div class="card meta-card">
+        <div class="meta-head">
+          <div class="meta-ico" style="background:var(--green-s)">🏦</div>
+          <div class="meta-info"><div class="mn">Reserva de Emergência</div><div class="ms">6 meses de gastos</div></div>
+          <span class="badge bg-green" style="margin-left:auto">✓ Atingida</span>
+        </div>
+        <div class="meta-body">
+          <div class="meta-nums"><div class="meta-saved" style="color:var(--g1)">R$ 12.000</div><div class="meta-target">de R$ 12.000</div></div>
+          <div class="meta-track"><div class="meta-fill" style="width:100%;background:var(--g1)"></div></div>
+          <div style="text-align:center;margin-top:10px;font-size:13px;font-weight:700;color:var(--g1)">🎉 Parabéns! Meta concluída!</div>
+        </div>
+      </div>
+
+      <!-- Savings Calculator button -->
+      <button class="calc-btn" onclick="openSheet('calcSheet')">
+        <span class="calc-btn-icon">🧮</span>
+        <div class="calc-btn-text">
+          <div class="t">Calculadora de metas</div>
+          <div class="s">Descubra quanto guardar por mês para chegar lá</div>
+        </div>
+        <span style="font-size:18px;color:var(--g1);margin-left:auto">›</span>
+      </button>
+
+      <div class="add-meta" onclick="openSheet('addMeta')">
+        <div class="add-meta-icon">+</div>
+        <p>Criar nova meta financeira</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALERTAS ────────────────────────────────────── -->
+  <div class="screen" id="tab-alertas">
+    <div class="page-header"><h1>Alertas</h1><p>Notificações inteligentes</p></div>
+
+    <!-- WhatsApp send-all button -->
+    <div style="padding:0 16px 4px">
+      <button class="alerts-wa-btn" onclick="sendAlertsWhatsApp()">
+        <span class="alerts-wa-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </span>
+        <span class="alerts-wa-label">Enviar todos os alertas</span>
+        <span class="alerts-wa-count" id="alerts-count">5</span>
+      </button>
+    </div>
+
+    <div style="padding:8px 16px 16px">
+      <div class="sec-label">Hoje</div>
+      <div class="alert-card ac-crit" data-icon="🚨" data-title="Lazer quase no limite" data-text="Você usou 78% do orçamento de lazer e o mês ainda não terminou. Pausar gastos agora evita o estouro." data-time="Hoje às 20:00">
+        <span class="ac-icon">🚨</span>
+        <div style="flex:1;min-width:0">
+          <div class="ac-title">Lazer quase no limite</div>
+          <div class="ac-text">Você usou 78% do orçamento de lazer e o mês ainda não terminou. Pausar gastos agora evita o estouro.</div>
+          <div class="ac-time">Hoje às 20:00</div>
+        </div>
+        <button class="ac-wa-btn" onclick="event.stopPropagation();sendSingleAlert(this.closest('.alert-card'))" title="Enviar via WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      </div>
+
+      <div class="alert-card ac-warn" data-icon="⚠️" data-title="Gasto diário acima da média" data-text="Média dos últimos 7 dias: R$ 98/dia. Seu limite recomendado é R$ 87,50. Reduza um pouco para equilibrar." data-time="Hoje às 18:30">
+        <span class="ac-icon">⚠️</span>
+        <div style="flex:1;min-width:0">
+          <div class="ac-title">Gasto diário acima da média</div>
+          <div class="ac-text">Média dos últimos 7 dias: R$ 98/dia. Seu limite recomendado é R$ 87,50. Reduza um pouco para equilibrar.</div>
+          <div class="ac-time">Hoje às 18:30</div>
+        </div>
+        <button class="ac-wa-btn" onclick="event.stopPropagation();sendSingleAlert(this.closest('.alert-card'))" title="Enviar via WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      </div>
+
+      <div class="sec-label" style="margin-top:16px">Esta semana</div>
+
+      <div class="alert-card ac-info" data-icon="📊" data-title="Resumo semanal" data-text="Você gastou R$ 687 nesta semana. Alimentação foi a maior categoria (R$ 248). +15% vs. semana passada." data-time="22 Mar às 09:00">
+        <span class="ac-icon">📊</span>
+        <div style="flex:1;min-width:0">
+          <div class="ac-title">Resumo semanal</div>
+          <div class="ac-text">Você gastou R$ 687 nesta semana. Alimentação foi a maior categoria (R$ 248). +15% vs. semana passada.</div>
+          <div class="ac-time">22 Mar às 09:00</div>
+        </div>
+        <button class="ac-wa-btn" onclick="event.stopPropagation();sendSingleAlert(this.closest('.alert-card'))" title="Enviar via WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      </div>
+
+      <div class="alert-card ac-ok" data-icon="🎉" data-title="Meta de economia atingida!" data-text="Você atingiu 100% da meta de economia de Março: R$ 900 guardados. Continue assim!" data-time="20 Mar às 15:00">
+        <span class="ac-icon">🎉</span>
+        <div style="flex:1;min-width:0">
+          <div class="ac-title">Meta de economia atingida!</div>
+          <div class="ac-text">Você atingiu 100% da meta de economia de Março: R$ 900 guardados. Continue assim!</div>
+          <div class="ac-time">20 Mar às 15:00</div>
+        </div>
+        <button class="ac-wa-btn" onclick="event.stopPropagation();sendSingleAlert(this.closest('.alert-card'))" title="Enviar via WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      </div>
+
+      <div class="alert-card ac-info" data-icon="💳" data-title="Conta fixa detectada" data-text="Netflix (R$ 39,90) foi debitada. Ainda dentro do orçamento de lazer." data-time="18 Mar às 06:00">
+        <span class="ac-icon">💳</span>
+        <div style="flex:1;min-width:0">
+          <div class="ac-title">Conta fixa detectada</div>
+          <div class="ac-text">Netflix (R$ 39,90) foi debitada. Ainda dentro do orçamento de lazer.</div>
+          <div class="ac-time">18 Mar às 06:00</div>
+        </div>
+        <button class="ac-wa-btn" onclick="event.stopPropagation();sendSingleAlert(this.closest('.alert-card'))" title="Enviar via WhatsApp">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PERFIL ─────────────────────────────────────── -->
+  <div class="screen" id="tab-perfil">
+    <div class="profile-hero">
+      <div class="ph-orb"></div>
+      <div class="ph-avatar">M</div>
+      <div class="ph-name">Mateus Gabriel</div>
+      <div class="ph-email">mateusgabrielsanto@gmail.com</div>
+      <div class="ph-plan"><span class="badge bg-gray" style="margin-top:8px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff" id="ph-plan-badge">⏳ Teste gratuito</span></div>
+    </div>
+
+    <div style="padding:16px 16px 0">
+      <div class="sec-label">Planos</div>
+      <!-- Trial card -->
+      <div class="plan-trial" id="plan-trial-card">
+        <div class="pt-top">
+          <div>
+            <div class="pt-badge">TESTE GRATUITO</div>
+            <div class="pt-title">Acesso completo por 4 dias</div>
+          </div>
+          <div class="pt-countdown" id="trial-days-left">4</div>
+        </div>
+        <div class="pt-bar-wrap">
+          <div class="pt-bar" id="trial-bar" style="width:0%"></div>
+        </div>
+        <div class="pt-sub" id="trial-bar-label">Você está no 1º dia do teste gratuito</div>
+        <div class="pt-features">
+          <span>✓ Tudo do Premium</span>
+          <span>✓ Sem cartão de crédito</span>
+          <span>✓ Cancele quando quiser</span>
+        </div>
+      </div>
+
+      <!-- Urgency banner (shown on last 2 days) -->
+      <div class="pt-urgency" id="trial-urgency" style="display:none">
+        ⚠️ Seu teste termina em breve — assine agora e mantenha o acesso
+      </div>
+
+      <!-- Premium plan -->
+      <div class="plan-pro">
+        <div class="plan-pro-inner">
+          <div style="display:inline-block;background:var(--gradient);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:99px;margin-bottom:10px;letter-spacing:.05em">⭐ CONTINUAR COM PREMIUM</div>
+          <div class="pn">Premium</div>
+          <div class="pp">R$ 37<sub>/mês</sub></div>
+          <div class="pf">✓ Transações ilimitadas<br>✓ Metas ilimitadas<br>✓ Alertas inteligentes<br>✓ Relatório mensal PDF<br>✓ Alertas via WhatsApp</div>
+          <button class="ob-btn" style="margin-top:16px" onclick="window.open('https://mpago.li/28RFFid','_blank')">Assinar por R$ 37/mês</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:16px 16px 0">
+      <div class="sec-label">Configurações</div>
+      <div class="card si-list" style="overflow:hidden;margin-bottom:16px">
+        <div class="si" onclick="openSheet('editSal')"><div class="si-icon" style="background:var(--green-s)">💵</div><div class="si-text"><div class="t">Salário e recebimento</div><div class="s">R$ 4.500 · Dia 30</div></div><span class="si-arr">›</span></div>
+        <div class="si" onclick="goTab('orcamento',null)"><div class="si-icon" style="background:var(--blue-s)">📊</div><div class="si-text"><div class="t">Divisão do orçamento</div><div class="s">50% / 30% / 20%</div></div><span class="si-arr">›</span></div>
+        <div class="si"><div class="si-icon" style="background:var(--purple-s)">🏠</div><div class="si-text"><div class="t">Gastos fixos</div><div class="s">4 contas cadastradas</div></div><span class="si-arr">›</span></div>
+        <div class="si"><div class="si-icon" style="background:#FFF3E0">🔔</div><div class="si-text"><div class="t">Notificações</div><div class="s">Alertas ativos</div></div><span class="si-arr">›</span></div>
+        <div class="si" onclick="openRptSheet()"><div class="si-icon" style="background:#E8F5E9">📲</div><div class="si-text"><div class="t" id="si-rpt-title">Relatório via WhatsApp</div><div class="s" id="si-rpt-sub">Enviar resumo de gastos</div></div><span class="si-arr" style="color:#25D366">›</span></div>
+        <div class="si" onclick="logOut()"><div class="si-icon" style="background:var(--red-s)">🚪</div><div class="si-text"><div class="t" style="color:var(--red)">Sair da conta</div></div><span class="si-arr">›</span></div>
+      </div>
+    </div>
+
+    <!-- Suporte -->
+    <div style="padding:16px 16px 24px">
+      <div class="sec-label">Suporte</div>
+      <div class="support-card">
+        <div class="support-card-top">
+          <div class="support-avatar">M</div>
+          <div>
+            <div class="support-name">Mateus · Suporte SalaryMan</div>
+            <div class="support-status"><span class="support-dot"></span>Disponível via WhatsApp</div>
+          </div>
+        </div>
+        <div class="support-desc">Encontrou algum problema ou tem dúvidas? Fale comigo diretamente — responderei o mais rápido possível.</div>
+        <div class="support-actions">
+          <button class="support-btn support-wa" onclick="window.open('https://wa.me/5521992739496?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20SalaryMan.','_blank')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Abrir WhatsApp
+          </button>
+          <button class="support-btn support-bug" onclick="openSheet('bugSheet')">
+            🐛 Reportar erro
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bug report sheet -->
+<div class="overlay" id="bugSheet" onclick="if(event.target===this)closeSheet('bugSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Reportar um erro</div>
+    <div class="f-row">
+      <label>O que aconteceu?</label>
+      <select id="bug-type">
+        <option>Erro ao carregar dados</option>
+        <option>Botão não funciona</option>
+        <option>Valor incorreto</option>
+        <option>Problema no WhatsApp</option>
+        <option>Outro</option>
+      </select>
+    </div>
+    <div class="f-row">
+      <label>Descreva o problema</label>
+      <textarea id="bug-desc" rows="4" placeholder="Ex: Quando clico em adicionar gasto, nada acontece..." style="width:100%;padding:12px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:var(--surface);color:var(--text1);font-family:inherit;font-size:14px;resize:none;line-height:1.5"></textarea>
+    </div>
+    <div class="f-row">
+      <label>Seu WhatsApp (opcional)</label>
+      <input type="tel" id="bug-phone" placeholder="(21) 99999-9999">
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('bugSheet')">Cancelar</button>
+      <button class="btn btn-primary" onclick="sendBugReport()">Enviar pelo WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SHEETS ═══════════════════════════════════════ -->
+<!-- Add Expense -->
+<div class="overlay" id="addExp" onclick="if(event.target===this)closeSheet('addExp')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Adicionar Gasto</div>
+    <div class="cat-grid">
+      <button class="cat-btn on" onclick="selCat(this)"><span class="em">🍔</span>Alimentação</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">🚗</span>Transporte</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">🎬</span>Lazer</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">🏠</span>Moradia</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">🏥</span>Saúde</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">🛍️</span>Compras</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">📚</span>Educação</button>
+      <button class="cat-btn" onclick="selCat(this)"><span class="em">⚡</span>Outros</button>
+    </div>
+    <div class="f-row f-big">
+      <label>Valor</label>
+      <div class="f-pfx"><span class="pfx">R$</span><input type="number" id="exp-val" placeholder="0,00"></div>
+    </div>
+    <div class="f-row"><label>Descrição (opcional)</label><input type="text" placeholder="Ex: Almoço no restaurante"></div>
+    <div class="f-row"><label>Data</label><input type="date" value="2026-03-23"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('addExp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveExp()">💾 Salvar gasto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Meta -->
+<div class="overlay" id="addMeta" onclick="if(event.target===this)closeSheet('addMeta')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nova Meta</div>
+    <div class="f-row"><label>Nome da meta</label><input type="text" placeholder="Ex: Comprar um carro"></div>
+    <div class="f-row"><label>Valor total</label><div class="f-pfx"><span class="pfx">R$</span><input type="number" placeholder="0,00"></div></div>
+    <div class="f-row"><label>Guardar por mês</label><div class="f-pfx"><span class="pfx">R$</span><input type="number" placeholder="0,00"></div></div>
+    <div class="f-row"><label>Prazo</label><input type="month" value="2026-12"></div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('addMeta')">Cancelar</button>
+      <button class="btn btn-primary" onclick="toast('🎯 Meta criada!','ok');closeSheet('addMeta')">Criar meta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Salary -->
+<div class="overlay" id="editSal" onclick="if(event.target===this)closeSheet('editSal')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Editar Salário</div>
+    <div class="f-row"><label>Salário líquido</label><div class="f-pfx"><span class="pfx">R$</span><input type="number" value="4500"></div></div>
+    <div class="f-row"><label>Dia de recebimento</label><select><option>Dia 5</option><option>Dia 10</option><option>Dia 15</option><option selected>Dia 30</option></select></div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('editSal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="toast('✅ Salário atualizado!','ok');closeSheet('editSal')">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD CARD SHEET ═══════════════════════════════════ -->
+<div class="overlay" id="addCardSheet" onclick="if(event.target===this)closeSheet('addCardSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">💳 Novo Cartão</div>
+    <div class="f-row">
+      <label>Nome do cartão</label>
+      <input type="text" id="new-card-name" placeholder="Ex: Nubank, Itaú, Santander…">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="f-row" style="margin-bottom:0">
+        <label>Últimos 4 dígitos</label>
+        <input type="number" id="new-card-digits" placeholder="0000" maxlength="4">
+      </div>
+      <div class="f-row" style="margin-bottom:0">
+        <label>Limite</label>
+        <div class="f-pfx"><span class="pfx">R$</span><input type="number" id="new-card-limit" placeholder="5.000"></div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+      <div class="f-row" style="margin-bottom:0">
+        <label>Dia de fechamento</label>
+        <input type="number" id="new-card-close" placeholder="1–31" min="1" max="31">
+      </div>
+      <div class="f-row" style="margin-bottom:0">
+        <label>Dia de vencimento</label>
+        <input type="number" id="new-card-due" placeholder="1–31" min="1" max="31">
+      </div>
+    </div>
+    <div class="f-row" style="margin-top:12px">
+      <label>Cor do cartão</label>
+      <div class="cc-color-row" id="cc-color-picker">
+        <div class="cc-color-swatch sel" data-color="linear-gradient(135deg,#6D28D9,#8B5CF6)" style="background:linear-gradient(135deg,#6D28D9,#8B5CF6)" onclick="pickCardColor(this)"></div>
+        <div class="cc-color-swatch" data-color="linear-gradient(135deg,#C2410C,#F97316)" style="background:linear-gradient(135deg,#C2410C,#F97316)" onclick="pickCardColor(this)"></div>
+        <div class="cc-color-swatch" data-color="linear-gradient(135deg,#065F46,#059669)" style="background:linear-gradient(135deg,#065F46,#059669)" onclick="pickCardColor(this)"></div>
+        <div class="cc-color-swatch" data-color="linear-gradient(135deg,#1A4A8A,#3D7EFF)" style="background:linear-gradient(135deg,#1A4A8A,#3D7EFF)" onclick="pickCardColor(this)"></div>
+        <div class="cc-color-swatch" data-color="linear-gradient(135deg,#831843,#EC4899)" style="background:linear-gradient(135deg,#831843,#EC4899)" onclick="pickCardColor(this)"></div>
+        <div class="cc-color-swatch" data-color="linear-gradient(135deg,#1A1A2E,#6C63FF)" style="background:linear-gradient(135deg,#1A1A2E,#6C63FF)" onclick="pickCardColor(this)"></div>
+      </div>
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeSheet('addCardSheet')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveNewCard()">💳 Salvar cartão</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CARD DETAIL SHEET ════════════════════════════════ -->
+<div class="overlay" id="cardDetailSheet" onclick="if(event.target===this)closeSheet('cardDetailSheet')">
+  <div class="sheet" style="max-height:88vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+
+    <!-- Virtual card preview -->
+    <div class="cc-detail-header" id="cd-header">
+      <div class="cc-card-shine"></div>
+      <span class="cc-card-chip" id="cd-emoji">💜</span>
+      <div style="font-size:13px;color:rgba(255,255,255,0.65);letter-spacing:.18em;font-weight:600;margin-bottom:10px" id="cd-num">•••• •••• •••• 4242</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-end">
+        <div style="font-size:18px;font-weight:900;color:#fff" id="cd-name">Nubank</div>
+        <div style="text-align:right">
+          <div style="font-size:20px;font-weight:900;color:#fff" id="cd-bill">R$ 1.847</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.6)">fatura atual</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="cc-detail-stats">
+      <div class="cc-detail-stat"><div class="v" id="cd-limit">R$ 5.000</div><div class="l">Limite</div></div>
+      <div class="cc-detail-stat"><div class="v" style="color:var(--g1)" id="cd-avail">R$ 3.153</div><div class="l">Disponível</div></div>
+      <div class="cc-detail-stat"><div class="v" id="cd-dates">Dia 3 / 10</div><div class="l">Fecha / Vence</div></div>
+    </div>
+
+    <!-- Limit progress -->
+    <div style="padding:0 0 14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:6px">
+        <span>Uso do limite</span><span id="cd-pct-lbl">37%</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div id="cd-pct-bar" style="height:100%;border-radius:99px;background:var(--g1);transition:width .5s ease;width:37%"></div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="sec-label" style="margin-bottom:10px">Lançamentos na fatura</div>
+    <div class="card exp-list" style="overflow:hidden;margin-bottom:14px" id="cd-txs">
+      <div class="exp-item"><div class="ei-icon" style="background:#FFF3E0">🍕</div><div class="ei-info"><div class="ei-name">iFood — Pizza</div><div class="ei-cat">🍔 Alimentação · Hoje</div></div><div class="ei-right"><div class="ei-amount">−R$ 42,90</div></div></div>
+      <div class="exp-item"><div class="ei-icon" style="background:var(--purple-s)">🎬</div><div class="ei-info"><div class="ei-name">Netflix</div><div class="ei-cat">🎬 Lazer · 22 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 39,90</div></div></div>
+      <div class="exp-item"><div class="ei-icon" style="background:var(--green-s)">🛒</div><div class="ei-info"><div class="ei-name">Supermercado Extra</div><div class="ei-cat">🍔 Alimentação · 20 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 218,40</div></div></div>
+      <div class="exp-item"><div class="ei-icon" style="background:var(--blue-s)">⛽</div><div class="ei-info"><div class="ei-name">Posto Shell</div><div class="ei-cat">🚗 Transporte · 18 Mar</div></div><div class="ei-right"><div class="ei-amount">−R$ 120,00</div></div></div>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="closeSheet('cardDetailSheet')">Fechar</button>
+      <button class="btn btn-primary" onclick="toast('✅ Fatura marcada como paga!','ok');closeSheet('cardDetailSheet')">💰 Pagar fatura</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SAVINGS CALCULATOR SHEET ════════════════════════ -->
+<div class="overlay" id="calcSheet" onclick="if(event.target===this)closeSheet('calcSheet')">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">🧮 Calculadora de Metas</div>
+
+    <div class="f-row">
+      <label>Quero ter no final</label>
+      <div class="f-pfx"><span class="pfx">R$</span><input type="number" id="calc-target" placeholder="10.000" oninput="calcSavings()"></div>
+    </div>
+    <div class="f-row">
+      <label>Em quantos meses</label>
+      <input type="number" id="calc-months" placeholder="12" min="1" oninput="calcSavings()">
+    </div>
+    <div class="f-row">
+      <label>Já tenho guardado (opcional)</label>
+      <div class="f-pfx"><span class="pfx">R$</span><input type="number" id="calc-initial" placeholder="0" oninput="calcSavings()"></div>
+    </div>
+
+    <div class="calc-rate-row">
+      <label>📈 Considerar rendimento</label>
+      <div class="calc-rate-toggle">
+        <select id="calc-rate" onchange="calcSavings()">
+          <option value="0">Sem rendimento</option>
+          <option value="0.00875" selected>CDI ~10,5% a.a.</option>
+          <option value="0.009125">Selic ~11% a.a.</option>
+          <option value="0.005">Poupança ~6% a.a.</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Result card -->
+    <div class="calc-result" id="calc-result">
+      <div class="calc-result-main">
+        <div class="calc-result-label">Guarde por mês</div>
+        <div class="calc-result-val" id="calc-monthly">R$ —</div>
+        <div class="calc-result-sub" id="calc-sub">—</div>
+      </div>
+      <div class="calc-breakdown">
+        <div class="calc-bk-item"><div class="calc-bk-val" id="calc-total-saved">—</div><div class="calc-bk-lbl">Total guardado</div></div>
+        <div class="calc-bk-item"><div class="calc-bk-val" id="calc-interest-gain" style="color:var(--g1)">—</div><div class="calc-bk-lbl">Ganho com juros</div></div>
+        <div class="calc-bk-item"><div class="calc-bk-val" id="calc-pct-goal">—</div><div class="calc-bk-lbl">% do salário</div></div>
+        <div class="calc-bk-item"><div class="calc-bk-val" id="calc-end-date">—</div><div class="calc-bk-lbl">Previsão</div></div>
+      </div>
+    </div>
+
+    <div class="sheet-actions" style="margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeSheet('calcSheet')">Fechar</button>
+      <button class="btn btn-primary" onclick="calcCreateGoal()">🎯 Criar meta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INVESTMENT TIP SHEETS ════════════════════════════ -->
+<div class="overlay" id="invTip1" onclick="if(event.target===this)closeSheet('invTip1')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#0F6E4F,#05C98A);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">🏦</div>
+      <div><div style="font-size:17px;font-weight:800">Reserva de Emergência</div><span class="inv-badge" style="background:rgba(5,201,138,0.15);color:var(--g1)">🌱 Iniciante</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">A reserva de emergência é o primeiro passo de qualquer jornada financeira. Ela deve cobrir de <strong>3 a 6 meses</strong> dos seus gastos mensais.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--green-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--g1);margin-bottom:4px">💡 Onde guardar</div>
+      <div style="font-size:13px;color:var(--text2)">CDB com liquidez diária, Tesouro Selic ou conta remunerada. Priorize liquidez e segurança, não rentabilidade.</div>
+    </div>
+    <div class="card" style="padding:14px 16px;background:var(--blue-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--g2);margin-bottom:4px">🎯 Sua meta sugerida</div>
+      <div style="font-size:13px;color:var(--text2)">Seus gastos mensais são ~R$ 2.843. Sua reserva ideal é entre <strong>R$ 8.529</strong> e <strong>R$ 17.058</strong>.</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip1');openSheet('calcSheet')">🧮 Calcular agora</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="invTip2" onclick="if(event.target===this)closeSheet('invTip2')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#1A4A8A,#3D7EFF);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">🏛️</div>
+      <div><div style="font-size:17px;font-weight:800">Tesouro Direto Selic</div><span class="inv-badge" style="background:rgba(61,126,255,0.15);color:var(--g2)">🌱 Iniciante</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">O título mais seguro do Brasil — garantido pelo governo federal. O Tesouro Selic acompanha a taxa básica de juros (~11% a.a.) com liquidez diária.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--blue-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--g2);margin-bottom:4px">✅ Vantagens</div>
+      <div style="font-size:13px;color:var(--text2)">Liquidez diária · Sem risco de perda · Investimento mínimo ~R$ 30 · Imposto regressivo (começa em 22,5% e cai para 15%)</div>
+    </div>
+    <div class="card" style="padding:14px 16px;background:var(--orange-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">⚠️ Atenção</div>
+      <div style="font-size:13px;color:var(--text2)">Há cobrança de IOF nos primeiros 30 dias e taxa da B3 de 0,20% a.a. sobre o saldo.</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip2');openSheet('calcSheet')">🧮 Simular rendimento</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="invTip3" onclick="if(event.target===this)closeSheet('invTip3')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#6B2F8A,#9B6DFF);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">📄</div>
+      <div><div style="font-size:17px;font-weight:800">CDB com Liquidez</div><span class="inv-badge" style="background:rgba(155,109,255,0.15);color:var(--purple)">🌿 Moderado</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">CDBs de bancos digitais costumam pagar de <strong>100% a 130% do CDI</strong> com liquidez diária. Protegido pelo FGC até R$ 250.000 por CPF por instituição.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--purple-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--purple);margin-bottom:4px">🏆 Boas opções</div>
+      <div style="font-size:13px;color:var(--text2)">Nubank, PicPay, Inter, C6 Bank — muitos oferecem CDBs de 100–130% CDI com resgate em D+0 ou D+1.</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip3');openSheet('calcSheet')">🧮 Simular</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="invTip4" onclick="if(event.target===this)closeSheet('invTip4')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#8A4A00,#FF8C00);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">📊</div>
+      <div><div style="font-size:17px;font-weight:800">ETFs — Fundos de Índice</div><span class="inv-badge" style="background:rgba(255,140,0,0.15);color:var(--orange)">🌿 Moderado</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">Um ETF replica um índice inteiro (ex: BOVA11 = todas as ações do Ibovespa). Com R$ 100 você já investe nas maiores empresas do Brasil.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--orange-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">📌 Mais conhecidos</div>
+      <div style="font-size:13px;color:var(--text2)">BOVA11 (Ibovespa) · IVVB11 (S&P500 em R$) · SMAL11 (Small Caps) · HASH11 (Cripto)</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip4');openSheet('calcSheet')">🧮 Simular</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="invTip5" onclick="if(event.target===this)closeSheet('invTip5')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#1A1A2E,#E94560);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">📈</div>
+      <div><div style="font-size:17px;font-weight:800">Ações & FIIs</div><span class="inv-badge" style="background:rgba(233,69,96,0.15);color:#E94560">🚀 Avançado</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">Ações são participações em empresas. FIIs (Fundos Imobiliários) pagam dividendos mensais isentos de IR para pessoas físicas — ótima fonte de renda passiva.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--red-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:4px">⚠️ Risco</div>
+      <div style="font-size:13px;color:var(--text2)">O preço oscila diariamente. Só invista o que pode deixar parado por pelo menos 5 anos. Estude antes de escolher ativos.</div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip5');openSheet('calcSheet')">🧮 Simular</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="invTip6" onclick="if(event.target===this)closeSheet('invTip6')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:48px;height:48px;background:linear-gradient(135deg,#004D40,#00BFA5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px">⚖️</div>
+      <div><div style="font-size:17px;font-weight:800">Regra 50/30/20</div><span class="inv-badge" style="background:rgba(0,191,165,0.15);color:#00BFA5">✅ Regra</span></div>
+    </div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:14px">A regra mais simples para construir riqueza: <strong>50%</strong> para necessidades, <strong>30%</strong> para lazer e <strong>20%</strong> para investimentos — sem exceção.</p>
+    <div class="card" style="padding:14px 16px;margin-bottom:12px;background:var(--green-s)">
+      <div style="font-size:13px;font-weight:700;color:var(--g1);margin-bottom:4px">📊 No seu caso (R$ 4.500)</div>
+      <div style="font-size:13px;color:var(--text2)">🏠 Essenciais: R$ 2.250 · 🎉 Lazer: R$ 1.350 · 💎 Investimento: <strong style="color:var(--g1)">R$ 900/mês</strong></div>
+    </div>
+    <div class="sheet-actions"><button class="btn btn-primary" onclick="closeSheet('invTip6');goTab('orcamento',null)">📊 Ver orçamento</button></div>
+  </div>
+</div>
+
+<!-- ═══ RELATÓRIO WHATSAPP SHEET ════════════════════════ -->
+<div class="overlay" id="rptSheet" onclick="if(event.target===this)closeSheet('rptSheet')">
+  <div class="sheet" style="max-height:92vh;overflow-y:auto">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="display:flex;align-items:center;gap:10px">
+      <svg viewBox="0 0 24 24" style="width:24px;height:24px;flex-shrink:0" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Relatório via WhatsApp
+    </div>
+
+    <!-- WhatsApp number -->
+    <div class="f-row" style="margin-bottom:8px">
+      <label>Número do WhatsApp</label>
+      <div class="f-pfx">
+        <span class="pfx" style="font-size:16px">🇧🇷</span>
+        <input type="tel" id="rpt-phone" placeholder="(11) 9 9999-9999" style="padding-left:36px"
+          oninput="formatPhone(this);localStorage.setItem('sm_rpt_phone',this.value)" value="">
+      </div>
+    </div>
+
+    <!-- Frequency chips -->
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);display:block;margin-bottom:8px">Tipo de relatório</label>
+    <div class="rpt-freq">
+      <div class="rpt-chip on" onclick="selRptFreq(this,'diario')">📅 Diário</div>
+      <div class="rpt-chip" onclick="selRptFreq(this,'semanal')">📊 Semanal</div>
+      <div class="rpt-chip" onclick="selRptFreq(this,'10dias')">🔟 10 dias</div>
+      <div class="rpt-chip" onclick="selRptFreq(this,'mensal')">📆 Mensal</div>
+    </div>
+
+    <!-- Auto-send toggle -->
+    <div class="rpt-sched-card">
+      <div class="rpt-sched-icon">🔁</div>
+      <div class="rpt-sched-text">
+        <div class="t">Envio automático</div>
+        <div class="s" id="rpt-sched-sub">Desativado</div>
+      </div>
+      <label class="rpt-toggle">
+        <input type="checkbox" id="rpt-auto" onchange="toggleAutoSend(this)">
+        <span class="rpt-slider"></span>
+      </label>
+    </div>
+
+    <!-- Next send countdown (hidden until auto-send is on) -->
+    <div id="rpt-next-box" style="display:none;background:rgba(61,126,255,0.07);border:1px solid rgba(61,126,255,0.18);border-radius:12px;padding:12px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--g2);margin-bottom:3px">📅 Próximo envio agendado</div>
+      <div id="rpt-next-date" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+      <div id="rpt-last-date" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+    </div>
+
+    <!-- Preview -->
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);display:block;margin-bottom:8px">Prévia da mensagem</label>
+    <div class="rpt-preview" id="rpt-preview-box">
+      <div class="rpt-head">📊 SALARYMAN · Relatório Diário</div>
+      <div class="rpt-sep">════════════════════</div>
+      <div>📅 <b>23/03/2026</b> — Domingo</div>
+      <div class="rpt-sep">────────────────────</div>
+      <div>💰 Salário: R$ 4.500</div>
+      <div class="rpt-warn">💸 Gasto hoje: R$ 98,50</div>
+      <div class="rpt-ok">✅ Limite diário: R$ 87,50</div>
+      <div class="rpt-sep">────────────────────</div>
+      <div>📦 Gastos do mês: R$ 2.843</div>
+      <div class="rpt-ok">🟢 Essenciais: R$ 1.843 / R$ 2.250</div>
+      <div class="rpt-warn">🟡 Lazer: R$ 1.053 / R$ 1.350 (78%)</div>
+      <div class="rpt-ok">💎 Economia: R$ 900 / R$ 900 ✓</div>
+      <div class="rpt-sep">────────────────────</div>
+      <div>🏆 Top gasto: 🍔 Alimentação R$ 620</div>
+      <div class="rpt-sep">════════════════════</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.35)">Enviado pelo SalaryMan 💚</div>
+    </div>
+
+    <!-- Actions -->
+    <div class="sheet-actions" style="flex-direction:column;gap:10px">
+      <button class="wa-btn" onclick="sendWhatsAppReport()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Enviar via WhatsApp
+      </button>
+      <button class="btn btn-ghost" onclick="closeSheet('rptSheet')" style="padding:12px">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toaster" id="toaster"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GOOGLE IDENTITY SERVICES (GIS) — IMPLEMENTAÇÃO PADRÃO
+   Documentação oficial: https://developers.google.com/identity/gsi/web
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * CLIENT_ID — substitua pelo seu ID gerado no Google Cloud Console.
+ * Enquanto for "SEU_CLIENT_ID...", o botão renderiza em modo DEMO.
+ */
+const GOOGLE_CLIENT_ID = document.querySelector('meta[name="google-client-id"]')
+  ?.getAttribute('content') || '';
+
+const IS_DEMO = !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('SEU_');
+
+/**
+ * Chamada automaticamente pelo GIS após o carregamento do script.
+ * O GIS expõe window.google.accounts.id após o carregamento assíncrono.
+ */
+function initGoogleSignIn() {
+  const wrap = document.getElementById('google-btn-wrap');
+  const placeholder = document.getElementById('gis-placeholder');
+
+  if (IS_DEMO) {
+    /* ── MODO DEMO (sem Client ID real) ─────────────────────────
+       Renderiza um botão visual que simula o fluxo para o protótipo.
+       Em produção, remova este bloco e use apenas o código abaixo. */
+    placeholder.style.animation = 'none';
+    placeholder.style.opacity = '1';
+    placeholder.innerHTML = `
+      <button onclick="handleGoogleDemo()"
+        style="width:100%;display:flex;align-items:center;gap:12px;
+               padding:12px 16px;border-radius:12px;cursor:pointer;
+               font-size:14px;font-weight:600;font-family:inherit;
+               background:rgba(255,255,255,0.07);
+               border:1px solid rgba(255,255,255,0.13);
+               color:rgba(255,255,255,0.88);
+               transition:background .2s,border-color .2s,transform .15s;
+               box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);"
+        onmouseover="this.style.background='rgba(255,255,255,0.11)';this.style.borderColor='rgba(255,255,255,0.22)'"
+        onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.borderColor='rgba(255,255,255,0.13)'"
+        onmousedown="this.style.transform='scale(.98)'"
+        onmouseup="this.style.transform='scale(1)'">
+        <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        Continuar com Google
+      </button>`;
+    return;
+  }
+
+  /* ── PRODUÇÃO (com Client ID real) ──────────────────────────
+     Inicializa o GIS e renderiza o botão oficial. */
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse,  // chamada ao fazer login
+    auto_select: false,                  // não logar automaticamente
+    cancel_on_tap_outside: true,
+  });
+
+  /* Remove o placeholder e renderiza o botão oficial do Google */
+  placeholder.remove();
+  google.accounts.id.renderButton(wrap, {
+    type: 'standard',
+    theme: 'filled_black',     // fundo preto — combina com o onboarding escuro
+    size: 'large',
+    text: 'signin_with',       // "Fazer login com o Google"
+    shape: 'rectangular',
+    logo_alignment: 'left',
+    width: wrap.offsetWidth || 340,
+  });
+
+  /* One Tap — popup discreto para login com 1 clique (opcional) */
+  // google.accounts.id.prompt(); // descomente para ativar One Tap
+}
+
+/**
+ * Callback chamado pelo GIS quando o usuário autentica com Google.
+ * "response.credential" é um JWT assinado pelo Google.
+ * @param {Object} response — { credential: string }
+ */
+function handleCredentialResponse(response) {
+  /* Decodifica o payload do JWT (não verificar aqui — faça isso no servidor) */
+  const payload = JSON.parse(atob(response.credential.split('.')[1]));
+
+  /* payload contém: sub, name, email, picture, email_verified, etc. */
+  const user = {
+    id:      payload.sub,
+    name:    payload.name,
+    email:   payload.email,
+    picture: payload.picture,
+    token:   response.credential, // enviar ao backend para verificar
+  };
+
+  console.log('[GIS] Usuário autenticado:', user.name, user.email);
+  applyGoogleUser(user);
+}
+
+/**
+ * Simula o fluxo para o protótipo (DEMO sem Client ID real).
+ */
+function handleGoogleDemo() {
+  const demoUser = {
+    name: 'Mateus Gabriel', email: 'mateusgabrielsanto@gmail.com', picture: null,
+  };
+  applyGoogleUser(demoUser);
+}
+
+/**
+ * Exibe o card de boas-vindas com os dados do usuário do Google
+ * e avança automaticamente para o próximo passo.
+ */
+function applyGoogleUser(user) {
+  /* Preenche o card de usuário */
+  document.getElementById('guc-name').textContent  = user.name;
+  document.getElementById('guc-email').textContent = user.email;
+
+  const avEl = document.getElementById('guc-av');
+  if (user.picture) {
+    avEl.outerHTML = `<img src="${user.picture}" class="guc-avatar" id="guc-av" alt="${user.name}">`;
+  } else {
+    avEl.textContent = user.name.charAt(0).toUpperCase();
+  }
+
+  /* Mostra o card */
+  document.getElementById('guc').classList.add('visible');
+
+  /* Esconde o botão de login e o divider */
+  document.getElementById('google-btn-wrap').style.display = 'none';
+
+  toast('✅ Login com Google realizado!', 'ok');
+
+  /* Avança para o próximo passo após 1.2s */
+  setTimeout(() => goOb(2), 1200);
+}
+
+/**
+ * Login por e-mail + senha (sem Google).
+ * Em produção: envie os dados para seu backend de autenticação.
+ */
+function loginEmail() {
+  const email = document.getElementById('ob-email')?.value;
+  const pass  = document.getElementById('ob-pass')?.value;
+  if (!email || !pass) { toast('⚠️ Preencha e-mail e senha', 'warn'); return; }
+  toast('✅ Entrando…', 'ok');
+  setTimeout(() => goOb(2), 800);
+}
+
+/* Inicializa o GIS assim que o script carregar (ou imediatamente se já carregou) */
+if (typeof google !== 'undefined' && google.accounts) {
+  initGoogleSignIn();
+} else {
+  window.addEventListener('load', () => {
+    /* Tenta novamente após o script GIS carregar */
+    const interval = setInterval(() => {
+      if (typeof google !== 'undefined' && google.accounts) {
+        clearInterval(interval);
+        initGoogleSignIn();
+      }
+    }, 150);
+    /* Fallback: se demorar mais de 5s, mostra modo demo */
+    setTimeout(() => { clearInterval(interval); initGoogleSignIn(); }, 5000);
+  });
+}
+
+/* ── CUSTOM SELECT ────────────────────────── */
+function toggleObSel(trigger) {
+  const menu = document.getElementById('payday-menu');
+  const isOpen = trigger.classList.contains('open');
+  trigger.classList.toggle('open', !isOpen);
+  menu.classList.toggle('open', !isOpen);
+}
+function pickObSel(opt, val) {
+  document.querySelectorAll('#payday-menu .ob-sel-opt').forEach(o => o.classList.remove('active'));
+  opt.classList.add('active');
+  document.getElementById('payday-label').textContent = val;
+  document.getElementById('payday-trigger').classList.remove('open');
+  document.getElementById('payday-menu').classList.remove('open');
+}
+/* Fecha ao clicar fora */
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ob-select')) {
+    document.querySelectorAll('.ob-sel-trigger').forEach(t => t.classList.remove('open'));
+    document.querySelectorAll('.ob-sel-menu').forEach(m => m.classList.remove('open'));
+  }
+});
+
+/* ── ONBOARDING ───────────────────────────── */
+let obFreqSel = '10dias';
+
+function goOb(n){
+  document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('os'+n).classList.add('active');
+  for(let i=1;i<=5;i++){
+    const s=document.getElementById('op'+i);
+    if(s) s.className=i<n?'done':i===n?'act':'';
+  }
+}
+
+function pickObFreq(freq){
+  obFreqSel = freq;
+  ['diario','semanal','10dias','mensal'].forEach(f=>{
+    const el = document.getElementById('obf-'+f);
+    if(el) el.classList.toggle('on', f===freq);
+  });
+}
+
+function obSavePhone(){
+  const val = document.getElementById('ob-phone').value;
+  const raw = val.replace(/\D/g,'');
+  if(raw.length < 10){ toast('⚠️ Informe um número válido ou pule','warn'); return; }
+  // Save to localStorage (same keys used by the report system)
+  localStorage.setItem('sm_rpt_phone', val);
+  localStorage.setItem('sm_rpt_freq', obFreqSel);
+  localStorage.setItem('sm_rpt_auto', '1');
+  const next = new Date(); next.setDate(next.getDate()+freqDays(obFreqSel)); next.setHours(21,0,0,0);
+  localStorage.setItem('sm_rpt_next', next.toISOString());
+  enterApp();
+}
+function addFix(){
+  const d=document.createElement('div'); d.className='fixed-item';
+  d.innerHTML=`<input class="ob-input" placeholder="Descrição" style="flex:1.5"><div class="ob-pfx" style="flex:1"><span class="pfx">R$</span><input class="ob-input" type="number" placeholder="0"></div><button class="del-btn" onclick="this.parentElement.remove()">×</button>`;
+  document.getElementById('fl').appendChild(d);
+}
+function updOb(){
+  const s=+document.getElementById('ob-sal').value||0;
+  document.getElementById('ob-e').textContent='R$ '+(s*.5).toFixed(0);
+  document.getElementById('ob-l').textContent='R$ '+(s*.3).toFixed(0);
+  document.getElementById('ob-s').textContent='R$ '+(s*.2).toFixed(0);
+}
+function enterApp(){
+  document.getElementById('onboarding').style.display='none';
+  document.getElementById('app').style.display='block';
+  animateGauge(); animateCounter(); initChart();
+  initTrial(); // setup trial countdown
+  toast('🎉 Bem-vindo ao SalaryMan!','ok');
+  setTimeout(checkAutoSend, 1200); // check after welcome toast
+}
+
+
+/* ── TRIAL (4-day free) ─────────────────────── */
+const TRIAL_DAYS = 4;
+const LS_TRIAL   = 'sm_trial_start';
+
+function initTrial() {
+  // Record start date on first launch
+  if (!localStorage.getItem(LS_TRIAL)) {
+    localStorage.setItem(LS_TRIAL, new Date().toISOString());
+  }
+  renderTrial();
+}
+
+function renderTrial() {
+  const start     = new Date(localStorage.getItem(LS_TRIAL) || new Date());
+  const now       = new Date();
+  const elapsed   = Math.floor((now - start) / 86400000); // days elapsed
+  const remaining = Math.max(0, TRIAL_DAYS - elapsed);
+  const pct       = Math.min(100, (elapsed / TRIAL_DAYS) * 100);
+
+  // Countdown number
+  const daysEl = document.getElementById('trial-days-left');
+  if (daysEl) daysEl.textContent = remaining;
+
+  // Progress bar
+  const barEl = document.getElementById('trial-bar');
+  if (barEl) setTimeout(() => { barEl.style.width = pct + '%'; }, 300);
+
+  // Sub-label
+  const subEl = document.getElementById('trial-bar-label');
+  if (subEl) {
+    if (remaining === 0) {
+      subEl.textContent = 'Seu teste gratuito encerrou hoje';
+    } else if (elapsed === 0) {
+      subEl.textContent = 'Você está no 1º dia do teste gratuito';
+    } else {
+      subEl.textContent = `${elapsed} dia${elapsed>1?'s':''} usados · ${remaining} dia${remaining>1?'s':''} restante${remaining>1?'s':''}`;
+    }
+  }
+
+  // Profile badge
+  const badgeEl = document.getElementById('ph-plan-badge');
+  if (badgeEl) {
+    if (remaining === 0) {
+      badgeEl.textContent = '🔒 Teste encerrado';
+      badgeEl.style.background = 'linear-gradient(135deg,#EF4444,#DC2626)';
+    } else {
+      badgeEl.textContent = `⏳ Teste · ${remaining} dia${remaining>1?'s':''}`;
+    }
+  }
+
+  // Urgency banner (last 2 days or expired)
+  const urgencyEl = document.getElementById('trial-urgency');
+  if (urgencyEl) {
+    urgencyEl.style.display = (remaining <= 2) ? 'block' : 'none';
+    if (remaining === 0) {
+      urgencyEl.textContent = '🔒 Seu teste encerrou — assine agora para não perder o acesso';
+      urgencyEl.style.borderColor = 'rgba(239,68,68,0.5)';
+    }
+  }
+
+  // Bar color: red when critical
+  if (barEl && remaining <= 1) {
+    barEl.style.background = 'linear-gradient(90deg,#EF4444,#DC2626)';
+  }
+}
+
+/* ── NAV ──────────────────────────────────── */
+function goTab(id,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById('tab-'+id);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  else document.querySelectorAll('.nav-tab').forEach(b=>{
+    if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'")) b.classList.add('active');
+  });
+  if(id==='gastos') setTimeout(initChart,80);
+}
+
+/* ── ANIMATIONS ───────────────────────────── */
+function animateGauge(){
+  let w=0; const target=63; const bar=document.getElementById('gauge-bar');
+  const t=setInterval(()=>{ w+=2; bar.style.width=Math.min(w,target)+'%'; if(w>=target) clearInterval(t); },18);
+}
+function animateCounter(){
+  const el=document.getElementById('daily-int');
+  let v=0; const target=87;
+  const t=setInterval(()=>{ v+=3; el.textContent=Math.min(v,target); if(v>=target) clearInterval(t); },14);
+}
+
+/* ── CHART ────────────────────────────────── */
+let catChart=null;
+function initChart(){
+  const c=document.getElementById('chartCat');
+  if(!c) return;
+  if(catChart){ catChart.destroy(); catChart=null; }
+  catChart=new Chart(c,{
+    type:'doughnut',
+    data:{
+      labels:['Alimentação','Transporte','Lazer','Moradia','Saúde','Outros'],
+      datasets:[{
+        data:[620,280,418,1200,150,175],
+        backgroundColor:['#FF8C00','#3D7EFF','#FF4D4D','#05C98A','#9B6DFF','#94A3B8'],
+        borderWidth:0, hoverOffset:10, borderRadius:4,
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{
+        legend:{position:'right',labels:{font:{size:11,family:'Inter'},usePointStyle:true,padding:12,color:'#5A6478'}},
+        tooltip:{callbacks:{label:c=>' R$ '+c.raw}}
+      },
+      animation:{animateRotate:true,duration:700}
+    }
+  });
+}
+
+/* ── BUDGET PCT ───────────────────────────── */
+function adjPct(el,id){ document.getElementById(id).textContent=el.value+'%'; }
+
+/* ── CATEGORY FILTER ──────────────────────── */
+function filterChip(el){
+  document.querySelectorAll('.cat-chips .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+}
+
+/* ── SHEET / MODAL ────────────────────────── */
+function openSheet(id){ document.getElementById(id).classList.add('open'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('open'); }
+
+function openRptSheet() {
+  openSheet('rptSheet');
+
+  // ── Restaurar número salvo ──────────────────────────
+  const savedPhone = localStorage.getItem(LS_PHONE) || '';
+  const phoneEl = document.getElementById('rpt-phone');
+  if (savedPhone && !phoneEl.value) phoneEl.value = savedPhone;
+
+  // ── Restaurar frequência salva ──────────────────────
+  const savedFreq = localStorage.getItem(LS_FREQ) || 'diario';
+  rptFreq = savedFreq;
+  document.querySelectorAll('.rpt-chip').forEach(c => {
+    const match = c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + savedFreq + "'");
+    c.classList.toggle('on', match);
+  });
+
+  // ── Restaurar toggle de auto-envio ──────────────────
+  const autoOn = localStorage.getItem(LS_AUTO) === '1';
+  const cb = document.getElementById('rpt-auto');
+  cb.checked = autoOn;
+
+  const schedMap = {
+    diario:  'Todo dia às 21:00',
+    semanal: 'Todo domingo às 21:00',
+    '10dias':'A cada 10 dias às 21:00',
+    mensal:  'Todo dia 1º às 08:00'
+  };
+  document.getElementById('rpt-sched-sub').textContent =
+    autoOn ? (schedMap[savedFreq] || schedMap['10dias']) : 'Desativado';
+
+  // ── Mostrar próximo envio se agendado ───────────────
+  if (autoOn) updateNextBox();
+  else document.getElementById('rpt-next-box').style.display = 'none';
+
+  // ── Atualizar prévia ────────────────────────────────
+  updateRptPreview();
+}
+function selCat(btn){ document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
+function saveExp(){
+  const v=document.getElementById('exp-val').value;
+  if(!v||+v<=0){ toast('⚠️ Informe um valor válido','warn'); return; }
+  const spent=document.getElementById('h-spent');
+  const left=document.getElementById('h-left');
+  const cur=2843+ +v;
+  const rem=4500-cur;
+  spent.textContent='R$ '+cur.toLocaleString('pt-BR',{minimumFractionDigits:0});
+  left.textContent='R$ '+Math.max(0,rem).toLocaleString('pt-BR',{minimumFractionDigits:0});
+  toast('✅ R$ '+parseFloat(v).toFixed(2)+' registrado!','ok');
+  closeSheet('addExp');
+}
+
+/* ── RELATÓRIOS / WHATSAPP ────────────────── */
+let rptFreq = 'diario';
+
+// LS keys
+const LS_FREQ   = 'sm_rpt_freq';
+const LS_AUTO   = 'sm_rpt_auto';
+const LS_PHONE  = 'sm_rpt_phone';
+const LS_LAST   = 'sm_rpt_last';  // ISO string of last send
+const LS_NEXT   = 'sm_rpt_next';  // ISO string of next scheduled send
+
+function freqDays(freq) {
+  return { diario: 1, semanal: 7, '10dias': 10, mensal: 30 }[freq] || 1;
+}
+
+function nextSendDate(from, freq) {
+  const d = new Date(from);
+  d.setDate(d.getDate() + freqDays(freq));
+  d.setHours(21, 0, 0, 0);
+  return d;
+}
+
+function fmtDate(d) {
+  const dt = new Date(d);
+  return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} às ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+}
+
+function selRptFreq(el, freq) {
+  document.querySelectorAll('.rpt-chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  rptFreq = freq;
+  localStorage.setItem(LS_FREQ, freq);
+  updateRptPreview();
+  const schedMap = {
+    diario:  'Todo dia às 21:00',
+    semanal: 'Todo domingo às 21:00',
+    '10dias':'A cada 10 dias às 21:00',
+    mensal:  'Todo dia 1º às 08:00'
+  };
+  const autoOn = document.getElementById('rpt-auto').checked;
+  document.getElementById('rpt-sched-sub').textContent = autoOn ? schedMap[freq] : 'Desativado';
+  if (autoOn) updateNextBox();
+}
+
+function toggleAutoSend(cb) {
+  const freq = rptFreq;
+  const schedMap = {
+    diario:  'Todo dia às 21:00',
+    semanal: 'Todo domingo às 21:00',
+    '10dias':'A cada 10 dias às 21:00',
+    mensal:  'Todo dia 1º às 08:00'
+  };
+
+  if (cb.checked) {
+    const now = new Date();
+    const next = nextSendDate(now, freq);
+    localStorage.setItem(LS_AUTO, '1');
+    localStorage.setItem(LS_FREQ, freq);
+    localStorage.setItem(LS_NEXT, next.toISOString());
+    const phone = document.getElementById('rpt-phone').value;
+    if (phone) localStorage.setItem(LS_PHONE, phone);
+    document.getElementById('rpt-sched-sub').textContent = schedMap[freq];
+    updateNextBox();
+    toast('🔁 Envio automático ativado!', 'ok');
+  } else {
+    localStorage.removeItem(LS_AUTO);
+    localStorage.removeItem(LS_NEXT);
+    document.getElementById('rpt-sched-sub').textContent = 'Desativado';
+    document.getElementById('rpt-next-box').style.display = 'none';
+    toast('⏸ Envio automático pausado', 'warn');
+  }
+}
+
+function updateNextBox() {
+  const next = localStorage.getItem(LS_NEXT);
+  const last = localStorage.getItem(LS_LAST);
+  const box  = document.getElementById('rpt-next-box');
+  const nextEl = document.getElementById('rpt-next-date');
+  const lastEl = document.getElementById('rpt-last-date');
+  if (!next) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const diffMs = new Date(next) - new Date();
+  const diffD  = Math.ceil(diffMs / 86400000);
+  const diffH  = Math.ceil(diffMs / 3600000);
+  let countdown = diffD > 1 ? `em ${diffD} dias` : diffH > 1 ? `em ${diffH} horas` : 'em breve';
+  nextEl.textContent = `${fmtDate(next)} (${countdown})`;
+  lastEl.textContent = last ? `Último envio: ${fmtDate(last)}` : 'Ainda não enviado';
+}
+
+// Run on page load — fires reminder if due
+function checkAutoSend() {
+  const auto  = localStorage.getItem(LS_AUTO);
+  const freq  = localStorage.getItem(LS_FREQ) || '10dias';
+  const next  = localStorage.getItem(LS_NEXT);
+  const phone = localStorage.getItem(LS_PHONE);
+
+  // Update sidebar label to show saved number
+  const siSub = document.getElementById('si-rpt-sub');
+  if (siSub && phone) siSub.textContent = `📱 ${phone}${auto ? ' · Auto ✓' : ''}`;
+
+  if (!auto || !next || !phone) return;
+
+  // Restore toggle state
+  const cb = document.getElementById('rpt-auto');
+  if (cb) cb.checked = true;
+
+  // Restore frequency chip
+  rptFreq = freq;
+  document.querySelectorAll('.rpt-chip').forEach(c => {
+    const isMatch = c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + freq + "'");
+    c.classList.toggle('on', isMatch);
+  });
+
+  const schedMap = {
+    diario:  'Todo dia às 21:00',
+    semanal: 'Todo domingo às 21:00',
+    '10dias':'A cada 10 dias às 21:00',
+    mensal:  'Todo dia 1º às 08:00'
+  };
+  const sub = document.getElementById('rpt-sched-sub');
+  if (sub) sub.textContent = schedMap[freq] || schedMap['10dias'];
+  updateNextBox();
+
+  if (new Date() >= new Date(next)) {
+    // Due! Show persistent reminder banner
+    const raw  = phone.replace(/\D/g,'');
+    const num  = raw.startsWith('55') ? raw : '55' + raw;
+    const msg  = encodeURIComponent(generateReportText(freq));
+    const url  = `https://wa.me/${num}?text=${msg}`;
+    const now  = new Date();
+    const nextN = nextSendDate(now, freq);
+    localStorage.setItem(LS_LAST, now.toISOString());
+    localStorage.setItem(LS_NEXT, nextN.toISOString());
+    updateNextBox();
+
+    // Show a prominent banner
+    showSendBanner(url, freq);
+  }
+}
+
+function showSendBanner(url, freq) {
+  const freqLabels = { diario:'diário', semanal:'semanal', '10dias':'10 dias', mensal:'mensal' };
+  const label = freqLabels[freq] || '10 dias';
+  const banner = document.createElement('div');
+  banner.id = 'rpt-banner';
+  banner.style.cssText = `
+    position:fixed;top:0;left:0;right:0;z-index:9998;
+    background:linear-gradient(135deg,#128C7E,#25D366);
+    padding:14px 16px;display:flex;align-items:center;gap:12px;
+    box-shadow:0 4px 20px rgba(18,140,126,0.4);
+    animation:toastIn .4s cubic-bezier(.34,1.56,.64,1);
+  `;
+  banner.innerHTML = `
+    <span style="font-size:22px;flex-shrink:0">📲</span>
+    <div style="flex:1;color:#fff">
+      <div style="font-size:13.5px;font-weight:700">Relatório ${label} pronto!</div>
+      <div style="font-size:12px;opacity:.85">Toque para enviar agora via WhatsApp</div>
+    </div>
+    <button onclick="window.open('${url}','_blank');document.getElementById('rpt-banner').remove()"
+      style="background:rgba(255,255,255,0.22);border:none;border-radius:10px;
+             color:#fff;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0">
+      Enviar
+    </button>
+    <button onclick="document.getElementById('rpt-banner').remove()"
+      style="background:none;border:none;color:rgba(255,255,255,0.65);font-size:20px;cursor:pointer;padding:0 4px;flex-shrink:0">✕</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function formatPhone(inp) {
+  let v = inp.value.replace(/\D/g, '');
+  if (v.length <= 2) v = v.replace(/^(\d{0,2})/, '($1');
+  else if (v.length <= 7) v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+  else v = v.replace(/^(\d{2})(\d{1})(\d{0,4})(\d{0,4})/, '($1) $2 $3-$4');
+  inp.value = v.replace(/-$/, '');
+}
+
+function generateReportText(freq) {
+  const now = new Date();
+  const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  const dayName = days[now.getDay()];
+
+  const freqLabels = { diario: 'Diário', semanal: 'Semanal', '10dias': '10 Dias', mensal: 'Mensal' };
+  const label = freqLabels[freq] || 'Diário';
+
+  let text = `📊 *SALARYMAN · Relatório ${label}*\n`;
+  text += `${'═'.repeat(22)}\n`;
+  text += `📅 *${dateStr}* — ${dayName}\n`;
+  text += `${'─'.repeat(22)}\n`;
+  text += `💰 Salário: R$ 4.500\n`;
+
+  if (freq === 'diario') {
+    text += `💸 Gasto hoje: R$ 98,50\n`;
+    text += `⚠️ Limite diário: R$ 87,50 _(acima do limite)_\n`;
+    text += `${'─'.repeat(22)}\n`;
+  } else if (freq === 'semanal') {
+    text += `💸 Gasto na semana: R$ 687,00\n`;
+    text += `📈 vs. semana passada: +15%\n`;
+    text += `${'─'.repeat(22)}\n`;
+  } else if (freq === '10dias') {
+    text += `💸 Gastos (10 dias): R$ 1.421,50\n`;
+    text += `📈 vs. período anterior: +12%\n`;
+    text += `🗓 Período: ${(()=>{const d=new Date();const p=new Date(d);p.setDate(p.getDate()-10);return `${String(p.getDate()).padStart(2,'0')}/${String(p.getMonth()+1).padStart(2,'0')} a ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;})()}\n`;
+    text += `${'─'.repeat(22)}\n`;
+  } else {
+    text += `💸 Gasto no mês: R$ 2.843,00\n`;
+    text += `📈 vs. mês passado: +8%\n`;
+    text += `${'─'.repeat(22)}\n`;
+  }
+
+  text += `📦 *Gastos do mês: R$ 2.843*\n`;
+  text += `🟢 Essenciais: R$ 1.843 / R$ 2.250\n`;
+  text += `🟡 Lazer: R$ 1.053 / R$ 1.350 _(78%)_\n`;
+  text += `💎 Economia: R$ 900 / R$ 900 ✅\n`;
+  text += `${'─'.repeat(22)}\n`;
+  text += `🏆 Top gasto: 🍔 Alimentação R$ 620\n`;
+  text += `${'═'.repeat(22)}\n`;
+  text += `_Enviado pelo SalaryMan 💚_`;
+  return text;
+}
+
+function updateRptPreview() {
+  const freq = rptFreq;
+  const freqLabels = { diario: 'Diário', semanal: 'Semanal', '10dias': '10 Dias', mensal: 'Mensal' };
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  const days = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const box = document.getElementById('rpt-preview-box');
+
+  let daily = freq === 'diario'
+    ? `<div class="rpt-warn">💸 Gasto hoje: R$ 98,50</div>
+       <div class="rpt-bad">⚠️ Limite diário: R$ 87,50 (acima)</div>
+       <div class="rpt-sep">────────────────────</div>`
+    : freq === 'semanal'
+    ? `<div class="rpt-warn">💸 Semana: R$ 687,00</div>
+       <div>📈 vs. semana passada: +15%</div>
+       <div class="rpt-sep">────────────────────</div>`
+    : freq === '10dias'
+    ? `<div class="rpt-warn">💸 Últimos 10 dias: R$ 1.421,50</div>
+       <div>📈 vs. período anterior: +12%</div>
+       <div class="rpt-sep">────────────────────</div>`
+    : `<div class="rpt-warn">💸 Mês: R$ 2.843,00</div>
+       <div>📈 vs. mês passado: +8%</div>
+       <div class="rpt-sep">────────────────────</div>`;
+
+  box.innerHTML = `
+    <div class="rpt-head">📊 SALARYMAN · Relatório ${freqLabels[freq]}</div>
+    <div class="rpt-sep">════════════════════</div>
+    <div>📅 <b>${dateStr}</b> — ${days[now.getDay()]}</div>
+    <div class="rpt-sep">────────────────────</div>
+    <div>💰 Salário: R$ 4.500</div>
+    ${daily}
+    <div>📦 Gastos do mês: R$ 2.843</div>
+    <div class="rpt-ok">🟢 Essenciais: R$ 1.843 / R$ 2.250</div>
+    <div class="rpt-warn">🟡 Lazer: R$ 1.053 / R$ 1.350 (78%)</div>
+    <div class="rpt-ok">💎 Economia: R$ 900 / R$ 900 ✓</div>
+    <div class="rpt-sep">────────────────────</div>
+    <div>🏆 Top: 🍔 Alimentação R$ 620</div>
+    <div class="rpt-sep">════════════════════</div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.35)">Enviado pelo SalaryMan 💚</div>`;
+}
+
+function sendWhatsAppReport() {
+  const raw = document.getElementById('rpt-phone').value.replace(/\D/g,'');
+  if (raw.length < 10) { toast('⚠️ Informe um número de WhatsApp válido','warn'); return; }
+  const phone = raw.startsWith('55') ? raw : '55' + raw;
+  const msg = encodeURIComponent(generateReportText(rptFreq));
+  const url = `https://wa.me/${phone}?text=${msg}`;
+
+  // Persist last send + schedule next
+  const now = new Date();
+  localStorage.setItem(LS_LAST, now.toISOString());
+  localStorage.setItem(LS_PHONE, document.getElementById('rpt-phone').value);
+  localStorage.setItem(LS_FREQ, rptFreq);
+  if (document.getElementById('rpt-auto').checked) {
+    localStorage.setItem(LS_AUTO, '1');
+    localStorage.setItem(LS_NEXT, nextSendDate(now, rptFreq).toISOString());
+    updateNextBox();
+  }
+
+  window.open(url, '_blank');
+  toast('✅ Abrindo WhatsApp...','ok');
+  setTimeout(() => closeSheet('rptSheet'), 400);
+}
+
+/* ── SEND ALERTS VIA WHATSAPP ──────────────── */
+function getAlertPhone() {
+  const raw = (localStorage.getItem(LS_PHONE) || '').replace(/\D/g,'');
+  if (raw.length < 10) return null;
+  return raw.startsWith('55') ? raw : '55' + raw;
+}
+
+function buildAlertsMessage(cards) {
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  let msg = `🔔 *SALARYMAN · Alertas*\n`;
+  msg += `${'═'.repeat(22)}\n`;
+  msg += `📅 ${dateStr}\n`;
+  msg += `${'─'.repeat(22)}\n`;
+  cards.forEach((c, i) => {
+    const icon  = c.dataset.icon  || '•';
+    const title = c.dataset.title || c.querySelector('.ac-title')?.textContent || '';
+    const text  = c.dataset.text  || c.querySelector('.ac-text')?.textContent  || '';
+    const time  = c.dataset.time  || c.querySelector('.ac-time')?.textContent  || '';
+    msg += `${icon} *${title}*\n${text}\n_${time}_\n`;
+    if (i < cards.length - 1) msg += `${'─'.repeat(22)}\n`;
+  });
+  msg += `${'═'.repeat(22)}\n`;
+  msg += `_Enviado pelo SalaryMan 💚_`;
+  return msg;
+}
+
+function sendAlertsWhatsApp() {
+  const phone = getAlertPhone();
+  if (!phone) {
+    toast('📱 Configure seu WhatsApp primeiro', 'warn');
+    setTimeout(() => openRptSheet(), 500);
+    return;
+  }
+  const cards = Array.from(document.querySelectorAll('#tab-alertas .alert-card'));
+  if (!cards.length) { toast('Nenhum alerta encontrado', 'warn'); return; }
+  const msg = buildAlertsMessage(cards);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  toast(`✅ ${cards.length} alertas enviados!`, 'ok');
+}
+
+function sendSingleAlert(card) {
+  const phone = getAlertPhone();
+  if (!phone) {
+    toast('📱 Configure seu WhatsApp primeiro', 'warn');
+    setTimeout(() => openRptSheet(), 500);
+    return;
+  }
+  const msg = buildAlertsMessage([card]);
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  toast('✅ Alerta enviado!', 'ok');
+}
+
+/* ── CREDIT CARDS ────────────────────────── */
+function switchGastosTab(tab, btn) {
+  document.querySelectorAll('.gsn-tab').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('.gsn-view').forEach(v => v.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gsv-' + tab).classList.add('on');
+  if (tab === 'cartoes') initCCScroll();
+}
+
+const CC_CARDS_DATA = {
+  nubank: {
+    name:'Nubank', num:'4242', emoji:'💜',
+    color:'linear-gradient(135deg,#6D28D9,#8B5CF6)',
+    bill:1847, limit:5000, closeDay:3, dueDay:10
+  },
+  itau: {
+    name:'Itaú', num:'7891', emoji:'🧡',
+    color:'linear-gradient(135deg,#C2410C,#F97316)',
+    bill:892, limit:1000, closeDay:20, dueDay:27
+  },
+  inter: {
+    name:'Inter', num:'1234', emoji:'💚',
+    color:'linear-gradient(135deg,#065F46,#059669)',
+    bill:340, limit:4000, closeDay:15, dueDay:22
+  }
+};
+
+function openCardDetail(id) {
+  const c = CC_CARDS_DATA[id];
+  if (!c) return;
+  const pct = Math.round((c.bill / c.limit) * 100);
+  const avail = c.limit - c.bill;
+  const barColor = pct >= 80 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--g1)';
+
+  document.getElementById('cd-header').style.background = c.color;
+  document.getElementById('cd-emoji').textContent = c.emoji;
+  document.getElementById('cd-num').textContent  = `•••• •••• •••• ${c.num}`;
+  document.getElementById('cd-name').textContent = c.name;
+  document.getElementById('cd-bill').textContent = fmtMoney(c.bill);
+  document.getElementById('cd-limit').textContent = fmtMoney(c.limit);
+  document.getElementById('cd-avail').textContent = fmtMoney(avail);
+  document.getElementById('cd-dates').textContent = `Dia ${c.closeDay} / ${c.dueDay}`;
+  document.getElementById('cd-pct-lbl').textContent = pct + '%';
+  document.getElementById('cd-pct-bar').style.width = pct + '%';
+  document.getElementById('cd-pct-bar').style.background = barColor;
+  openSheet('cardDetailSheet');
+}
+
+let selectedCardColor = 'linear-gradient(135deg,#6D28D9,#8B5CF6)';
+function pickCardColor(el) {
+  document.querySelectorAll('.cc-color-swatch').forEach(s => s.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedCardColor = el.dataset.color;
+}
+
+function saveNewCard() {
+  const name   = document.getElementById('new-card-name').value.trim();
+  const digits = document.getElementById('new-card-digits').value.trim();
+  const limit  = parseFloat(document.getElementById('new-card-limit').value) || 0;
+  const close  = parseInt(document.getElementById('new-card-close').value) || 0;
+  const due    = parseInt(document.getElementById('new-card-due').value) || 0;
+  if (!name || !digits || !limit || !close || !due) {
+    toast('⚠️ Preencha todos os campos', 'warn'); return;
+  }
+  // In production, save to localStorage/API; for prototype, show toast
+  toast(`💳 ${name} ••${digits} adicionado!`, 'ok');
+  closeSheet('addCardSheet');
+  // Clear form
+  ['new-card-name','new-card-digits','new-card-limit','new-card-close','new-card-due']
+    .forEach(id => document.getElementById(id).value = '');
+}
+
+// Drag scroll for credit card carousel
+function initCCScroll() {
+  const el = document.getElementById('ccScroll');
+  if (!el || el._dragInit) return;
+  el._dragInit = true;
+  let isDown=false,startX=0,scrollLeft=0,velX=0,lastX=0,lastT=0,rafId=null,dragged=false;
+  function down(e){ isDown=true;dragged=false;el.classList.add('dragging');startX=(e.pageX??e.touches[0].pageX)-el.offsetLeft;scrollLeft=el.scrollLeft;velX=0;lastX=startX;lastT=Date.now();if(rafId){cancelAnimationFrame(rafId);rafId=null;} }
+  function move(e){ if(!isDown)return;e.preventDefault();const x=(e.pageX??e.touches[0].pageX)-el.offsetLeft;const walk=x-startX;if(Math.abs(walk)>4)dragged=true;const now=Date.now();velX=(x-lastX)/Math.max(1,now-lastT);lastX=x;lastT=now;el.scrollLeft=scrollLeft-walk; }
+  function up(){ if(!isDown)return;isDown=false;el.classList.remove('dragging');let v=velX*16;function m(){if(Math.abs(v)<0.5){el.style.scrollSnapType='';return;}el.scrollLeft-=v;v*=0.88;rafId=requestAnimationFrame(m);}el.style.scrollSnapType='none';m(); }
+  el.addEventListener('click',e=>{if(dragged){e.stopPropagation();e.preventDefault();dragged=false;}},true);
+  el.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  el.addEventListener('touchstart',down,{passive:true});el.addEventListener('touchmove',move,{passive:false});el.addEventListener('touchend',up);
+}
+
+/* ── INVESTMENT TIPS DRAG SCROLL ─────────── */
+(function(){
+  const el = document.getElementById('invScroll');
+  if (!el) return;
+
+  let isDown = false, startX = 0, scrollLeft = 0;
+  let velX = 0, lastX = 0, lastT = 0, rafId = null;
+  let dragged = false;  // distingue clique de arraste
+
+  function onDown(e) {
+    isDown = true; dragged = false;
+    el.classList.add('dragging');
+    startX    = (e.pageX ?? e.touches[0].pageX) - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+    velX = 0; lastX = startX; lastT = Date.now();
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function onMove(e) {
+    if (!isDown) return;
+    e.preventDefault();
+    const x    = (e.pageX ?? e.touches[0].pageX) - el.offsetLeft;
+    const walk = x - startX;
+    if (Math.abs(walk) > 4) dragged = true;
+
+    const now = Date.now();
+    velX = (x - lastX) / Math.max(1, now - lastT);
+    lastX = x; lastT = now;
+    el.scrollLeft = scrollLeft - walk;
+  }
+
+  function onUp() {
+    if (!isDown) return;
+    isDown = false;
+    el.classList.remove('dragging');
+    // Momentum
+    let v = velX * 16;
+    function momentum() {
+      if (Math.abs(v) < 0.5) { el.style.scrollSnapType = ''; return; }
+      el.scrollLeft -= v;
+      v *= 0.88;
+      rafId = requestAnimationFrame(momentum);
+    }
+    el.style.scrollSnapType = 'none';
+    momentum();
+  }
+
+  // Block click on cards if we dragged
+  el.addEventListener('click', e => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true);
+
+  // Mouse events
+  el.addEventListener('mousedown',  onDown);
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup',   onUp);
+
+  // Touch events (passthrough — mobile already works, but keeps momentum)
+  el.addEventListener('touchstart', onDown, { passive:true });
+  el.addEventListener('touchmove',  onMove, { passive:false });
+  el.addEventListener('touchend',   onUp);
+})();
+
+/* ── SAVINGS CALCULATOR ──────────────────── */
+function calcSavings() {
+  const target  = parseFloat(document.getElementById('calc-target').value)  || 0;
+  const months  = parseInt(document.getElementById('calc-months').value)    || 0;
+  const initial = parseFloat(document.getElementById('calc-initial').value) || 0;
+  const rate    = parseFloat(document.getElementById('calc-rate').value)    || 0;
+  const result  = document.getElementById('calc-result');
+
+  if (!target || !months || target <= initial) { result.classList.remove('show'); return; }
+
+  let monthly;
+  let totalInterest = 0;
+
+  if (rate === 0) {
+    // Sem juros
+    monthly = (target - initial) / months;
+    totalInterest = 0;
+  } else {
+    // Com juros compostos mensais
+    // FV = P*(1+r)^n + PMT * ((1+r)^n - 1) / r
+    // PMT = (FV - P*(1+r)^n) * r / ((1+r)^n - 1)
+    const factor = Math.pow(1 + rate, months);
+    monthly = (target - initial * factor) * rate / (factor - 1);
+    const totalSaved = monthly * months + initial;
+    totalInterest = target - totalSaved;
+  }
+
+  if (monthly <= 0) {
+    document.getElementById('calc-monthly').textContent = 'Já tem o suficiente! 🎉';
+    document.getElementById('calc-sub').textContent = `Seu valor inicial já cobre a meta com rendimentos.`;
+    document.getElementById('calc-total-saved').textContent = fmtMoney(initial);
+    document.getElementById('calc-interest-gain').textContent = fmtMoney(target - initial);
+    document.getElementById('calc-pct-goal').textContent = '—';
+    document.getElementById('calc-end-date').textContent = calcEndDate(months);
+    result.classList.add('show');
+    return;
+  }
+
+  const totalDeposited = monthly * months + initial;
+  const pctSalary = ((monthly / 4500) * 100).toFixed(0);
+  const rateLabel = rate === 0 ? 'sem rendimento' : `com ${(rate * 1200).toFixed(1)}% a.a.`;
+
+  document.getElementById('calc-monthly').textContent  = fmtMoney(monthly);
+  document.getElementById('calc-sub').textContent      = `Em ${months} mes${months>1?'es':''} você chega a ${fmtMoney(target)} (${rateLabel})`;
+  document.getElementById('calc-total-saved').textContent    = fmtMoney(totalDeposited);
+  document.getElementById('calc-interest-gain').textContent  = fmtMoney(Math.max(0, totalInterest));
+  document.getElementById('calc-pct-goal').textContent       = `${pctSalary}% salário`;
+  document.getElementById('calc-end-date').textContent       = calcEndDate(months);
+  result.classList.add('show');
+}
+
+function fmtMoney(v) {
+  return 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function calcEndDate(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + months);
+  return d.toLocaleDateString('pt-BR', { month:'short', year:'numeric' });
+}
+
+function calcCreateGoal() {
+  const target = document.getElementById('calc-target').value;
+  const months = document.getElementById('calc-months').value;
+  if (!target || !months) { toast('⚠️ Preencha a meta e o prazo','warn'); return; }
+  toast('🎯 Meta criada com sucesso!', 'ok');
+  closeSheet('calcSheet');
+  goTab('metas', null);
+}
+
+/* ── THEME ────────────────────────────────── */
+(function initTheme(){
+  const saved = localStorage.getItem('sm_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if(saved === 'dark' || (!saved && prefersDark)) {
+    document.body.classList.add('dark');
+    const btn = document.getElementById('theme-btn');
+    if(btn) btn.textContent = '☀️';
+  }
+})();
+
+function toggleTheme(){
+  const isDark = document.body.classList.toggle('dark');
+  const btn = document.getElementById('theme-btn');
+  btn.textContent = isDark ? '☀️' : '🌙';
+  btn.style.transform = 'scale(.92) rotate(20deg)';
+  setTimeout(()=>btn.style.transform='',300);
+  localStorage.setItem('sm_theme', isDark ? 'dark' : 'light');
+  toast(isDark ? '🌙 Modo escuro ativado' : '☀️ Modo claro ativado', 'ok');
+}
+
+/* ── TOAST ────────────────────────────────── */
+function toast(msg,type='ok'){
+  const icons={ok:'✅',warn:'⚠️',err:'❌'};
+  const t=document.getElementById('toaster');
+  const d=document.createElement('div');
+  d.className='toast t-'+type;
+  d.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  t.appendChild(d);
+  setTimeout(()=>{ d.style.transition='opacity .3s,transform .3s'; d.style.opacity='0'; d.style.transform='translateY(-8px) scale(.95)'; },3000);
+  setTimeout(()=>d.remove(),3350);
+}
+
+/* ── BUG REPORT ──────────────────────────────── */
+function sendBugReport() {
+  const type  = document.getElementById('bug-type').value;
+  const desc  = document.getElementById('bug-desc').value.trim();
+  const phone = document.getElementById('bug-phone').value.trim();
+  if (!desc) { toast('Descreva o problema antes de enviar', 'warn'); return; }
+
+  const now = new Date();
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  let msg = `🐛 *SALARYMAN · Relatório de Erro*\n`;
+  msg += `${'─'.repeat(22)}\n`;
+  msg += `📌 *Tipo:* ${type}\n`;
+  msg += `📝 *Descrição:* ${desc}\n`;
+  msg += `📅 *Quando:* ${dateStr}\n`;
+  if (phone) msg += `📱 *Contato:* ${phone}\n`;
+  msg += `${'─'.repeat(22)}\n`;
+  msg += `_Enviado pelo SalaryMan_`;
+
+  window.open(`https://wa.me/5521992739496?text=${encodeURIComponent(msg)}`, '_blank');
+  toast('✅ Abrindo WhatsApp...', 'ok');
+  setTimeout(() => closeSheet('bugSheet'), 400);
+}
+
+/* ── LOGOUT ───────────────────────────────────── */
+function logOut() {
+  toast('👋 Até logo!', 'warn');
+  // Limpa chaves de sessão para que o onboarding apareça no próximo acesso
+  ['sm_trial_start', LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
+  setTimeout(() => {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('onboarding').style.display = 'flex';
+    // Volta para o passo 1 do onboarding
+    document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
+    document.getElementById('os1').classList.add('active');
+  }, 700);
+}
+
+/* ── AUTO-LOGIN: pula onboarding se já tem conta ── */
+(function autoLogin(){
+  const hasAccount = localStorage.getItem('sm_trial_start') || localStorage.getItem(LS_PHONE) || localStorage.getItem('sm_rpt_next');
+  if (hasAccount) {
+    // Vai direto para o app sem mostrar onboarding
+    document.getElementById('onboarding').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    animateGauge(); animateCounter(); initChart();
+    initTrial();
+    setTimeout(checkAutoSend, 800);
+  }
+})();
+</script>
+</body>
+</html>
