@@ -1774,15 +1774,17 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
     <div class="gauge-card card">
       <div class="gauge-inner">
         <div class="gauge-top">
-          <div><div class="gauge-title">Progresso do mês</div><div class="gauge-sub">23 de 31 dias passados</div></div>
+          <div><div class="gauge-title">Progresso do mês</div><div class="gauge-sub" id="gauge-sub">— de — dias passados</div></div>
           <span class="badge bg-orange" id="gauge-pct">0% gasto</span>
         </div>
         <div class="gauge-track">
           <div class="gauge-fill" id="gauge-fill" style="width:0%"></div>
-          <div class="gauge-marker" style="left:74%"></div>
+          <div class="gauge-marker" id="gauge-marker" style="left:0%"></div>
         </div>
         <div class="gauge-lbs">
-          <span>1 Mar</span><span style="color:var(--orange);font-weight:700">Hoje (74% do mês)</span><span>31 Mar</span>
+          <span id="gauge-lb-start">1 Mar</span>
+          <span id="gauge-lb-today" style="color:var(--orange);font-weight:700">Hoje</span>
+          <span id="gauge-lb-end">31 Mar</span>
         </div>
       </div>
     </div>
@@ -3065,20 +3067,62 @@ function applyGoogleUser(user) {
 
   toast('✅ Login com Google realizado!', 'ok');
 
-  /* Avança para o próximo passo após 1.2s */
+  /* Se já tem conta cadastrada → vai direto para o app */
+  if (localStorage.getItem('sm_logged_in')) {
+    setTimeout(() => launchApp(), 700);
+    return;
+  }
+
+  /* Primeira vez → avança para o próximo passo após 1.2s */
   setTimeout(() => goOb(2), 1200);
 }
 
 /**
  * Login por e-mail + senha (sem Google).
- * Em produção: envie os dados para seu backend de autenticação.
  */
 function loginEmail() {
   const email = document.getElementById('ob-email')?.value;
   const pass  = document.getElementById('ob-pass')?.value;
   if (!email || !pass) { toast('⚠️ Preencha e-mail e senha', 'warn'); return; }
+  if (localStorage.getItem('sm_logged_in')) {
+    toast('✅ Bem-vindo de volta!', 'ok');
+    setTimeout(() => launchApp(), 500);
+    return;
+  }
   toast('✅ Entrando…', 'ok');
   setTimeout(() => goOb(2), 800);
+}
+
+/**
+ * Abre o app e garante que a tela inicial (Home) está ativa.
+ * Usada pelo enterApp(), auto-login e retorno do Google.
+ */
+function launchApp() {
+  document.getElementById('onboarding').style.display = 'none';
+  const app = document.getElementById('app');
+  app.style.opacity = '0';
+  app.style.display = 'block';
+  requestAnimationFrame(() => {
+    app.style.transition = 'opacity .4s ease';
+    app.style.opacity = '1';
+    setTimeout(() => app.style.transition = '', 450);
+  });
+
+  // Força aba Início ativa
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const homeScreen = document.getElementById('tab-home');
+  if (homeScreen) homeScreen.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  const homeBtn = document.querySelector('.nav-tab[onclick*="home"]');
+  if (homeBtn) homeBtn.classList.add('active');
+  window.scrollTo(0, 0);
+
+  // Inicializa componentes
+  initChart();
+  initTrial();
+  renderDashboard();
+  setTimeout(renderInvPath, 600);
+  setTimeout(checkAutoSend, 1200);
 }
 
 /* Inicializa o GIS assim que o script carregar (ou imediatamente se já carregou) */
@@ -3201,14 +3245,8 @@ function updOb(){
 }
 function enterApp(){
   localStorage.setItem('sm_logged_in','1'); // marca sessão para auto-login futuro
-  document.getElementById('onboarding').style.display='none';
-  document.getElementById('app').style.display='block';
-  animateGauge(); animateCounter(); initChart();
-  initTrial();
-  renderDashboard();
-  setTimeout(renderInvPath, 600);
   toast('🎉 Bem-vindo ao SalaryMan!','ok');
-  setTimeout(checkAutoSend, 1200);
+  launchApp();
 }
 
 
@@ -3499,12 +3537,35 @@ function renderDashboard() {
   renderRecentExps(monthExps.slice(0, 8));
   renderAllExps(monthExps);
 
-  // Update gauge
-  const pct = sal > 0 ? Math.min(100, (totalSpent/sal)*100) : 0;
+  // Update gauge — barra = progresso do mês (dias), badge = % gasto
+  const timePct  = Math.min(100, Math.round((daysPassed / daysInMonth) * 100));
+  const spentPct = sal > 0 ? Math.min(100, Math.round((totalSpent / sal) * 100)) : 0;
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const mesNome = MESES[month];
+
   const gaugeEl = document.getElementById('gauge-fill');
-  if(gaugeEl) setTimeout(() => gaugeEl.style.width = pct + '%', 300);
+  if(gaugeEl) setTimeout(() => gaugeEl.style.width = timePct + '%', 150);
+
+  const markerEl = document.getElementById('gauge-marker');
+  if(markerEl) markerEl.style.left = timePct + '%';
+
+  const gaugeSub = document.getElementById('gauge-sub');
+  if(gaugeSub) gaugeSub.textContent = `${daysPassed} de ${daysInMonth} dias passados`;
+
   const gaugePct = document.getElementById('gauge-pct');
-  if(gaugePct) gaugePct.textContent = Math.round(pct) + '% gasto';
+  if(gaugePct) {
+    gaugePct.textContent = spentPct + '% gasto';
+    gaugePct.style.background = spentPct >= 90 ? 'linear-gradient(135deg,#EF4444,#DC2626)'
+      : spentPct >= 70 ? 'linear-gradient(135deg,#F97316,#EA580C)'
+      : 'linear-gradient(135deg,#F59E0B,#D97706)';
+  }
+
+  const lbStart = document.getElementById('gauge-lb-start');
+  const lbToday = document.getElementById('gauge-lb-today');
+  const lbEnd   = document.getElementById('gauge-lb-end');
+  if(lbStart) lbStart.textContent = `1 ${mesNome}`;
+  if(lbToday) lbToday.textContent = `Hoje (${timePct}% do mês)`;
+  if(lbEnd)   lbEnd.textContent   = `${daysInMonth} ${mesNome}`;
 }
 
 function renderCategoryChips(byCat, total) {
@@ -4862,14 +4923,8 @@ function logOut() {
     setTimeout(() => app.style.transition = '', 400);
   });
 
-  // Inicializa todos os componentes
-  animateGauge();
-  animateCounter();
-  initChart();
-  initTrial();
-  renderDashboard();
-  renderInvPath();
-  setTimeout(checkAutoSend, 800);
+  // Abre direto na tela inicial
+  launchApp();
 })();
 </script>
 </body>
