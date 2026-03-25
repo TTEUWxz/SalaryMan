@@ -29,7 +29,7 @@
   7. Copie o Client ID gerado e cole abaixo
   ══════════════════════════════════════════════════════
 -->
-<meta name="google-client-id" content="SEU_CLIENT_ID.apps.googleusercontent.com">
+<meta name="google-client-id" content="535230636384-g4udb5ihqi307j84ocqduneuu2mu35sg.apps.googleusercontent.com">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&display=swap');
 
@@ -2571,6 +2571,13 @@ function initGoogleSignIn() {
 
   /* ── PRODUÇÃO (com Client ID real) ──────────────────────────
      Inicializa o GIS e renderiza o botão oficial. */
+  if (typeof google === 'undefined' || !google.accounts) {
+    placeholder.style.animation = 'none';
+    placeholder.style.opacity = '1';
+    placeholder.innerHTML = `<button onclick="handleGoogleDemo()" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);color:rgba(255,255,255,0.88)"><svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continuar com Google</button>`;
+    return;
+  }
+
   google.accounts.id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: handleCredentialResponse,  // chamada ao fazer login
@@ -2667,21 +2674,20 @@ function loginEmail() {
 }
 
 /* Inicializa o GIS assim que o script carregar (ou imediatamente se já carregou) */
-if (typeof google !== 'undefined' && google.accounts) {
-  initGoogleSignIn();
-} else {
-  window.addEventListener('load', () => {
-    /* Tenta novamente após o script GIS carregar */
-    const interval = setInterval(() => {
-      if (typeof google !== 'undefined' && google.accounts) {
-        clearInterval(interval);
-        initGoogleSignIn();
-      }
-    }, 150);
-    /* Fallback: se demorar mais de 5s, mostra modo demo */
-    setTimeout(() => { clearInterval(interval); initGoogleSignIn(); }, 5000);
-  });
-}
+(function waitForGIS() {
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleSignIn(); return;
+  }
+  let elapsed = 0;
+  const iv = setInterval(() => {
+    elapsed += 200;
+    if (typeof google !== 'undefined' && google.accounts) {
+      clearInterval(iv); initGoogleSignIn();
+    } else if (elapsed >= 6000) {
+      clearInterval(iv); initGoogleSignIn(); // guard interno trata google indefinido
+    }
+  }, 200);
+})();
 
 /* ── CUSTOM SELECT ────────────────────────── */
 function toggleObSel(trigger) {
