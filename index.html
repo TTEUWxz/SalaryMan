@@ -20,9 +20,10 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%2305C98A'/%3E%3Cstop offset='1' stop-color='%233D7EFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='2' y='20' width='8' height='10' rx='2.5' fill='white' opacity='0.55'/%3E%3Crect x='12' y='12' width='8' height='18' rx='2.5' fill='white' opacity='0.8'/%3E%3Crect x='22' y='4' width='8' height='26' rx='2.5' fill='white'/%3E%3C/svg%3E">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
-<!-- ✅ Google Identity Services (GIS) — método padrão atual do Google -->
-<!-- Substitui o antigo "Google Sign-In" (gapi). Carregamento assíncrono. -->
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- ✅ Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <!--
   ══════════════════════════════════════════════════════
@@ -1402,6 +1403,30 @@ body.dark .imp-bank-tag { background:var(--dark3); border-color:var(--border); }
 body.dark .imp-cat-sel { background:var(--dark2); border-color:var(--border); color:var(--text); }
 body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 
+/* ── LOADING SCREEN ──────────────────────────────── */
+#loading-screen {
+  position:fixed; inset:0; z-index:9999;
+  background:radial-gradient(ellipse 80% 60% at 50% 0%, #112240 0%, #060D1A 100%);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+  transition:opacity .35s ease;
+}
+#loading-screen.hide { opacity:0; pointer-events:none; }
+.ls-logo {
+  width:72px; height:72px; border-radius:22px;
+  background:linear-gradient(135deg,#05C98A,#3D7EFF);
+  display:flex; align-items:center; justify-content:center;
+  font-size:36px; box-shadow:0 8px 32px rgba(5,201,138,.4);
+  animation:floatIcon 2.5s ease-in-out infinite;
+}
+.ls-name { font-size:22px; font-weight:800; color:#fff; letter-spacing:-.5px; }
+.ls-spinner {
+  width:32px; height:32px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.1);
+  border-top-color:#05C98A;
+  animation:spin .8s linear infinite; margin-top:8px;
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+
 /* ── TRIAL PAYWALL ───────────────────────────────── */
 #trial-paywall {
   display:none;
@@ -1451,8 +1476,15 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 </head>
 <body>
 
+<!-- ═══ LOADING ════════════════════════════════════ -->
+<div id="loading-screen">
+  <div class="ls-logo">💰</div>
+  <div class="ls-name">SalaryMan</div>
+  <div class="ls-spinner"></div>
+</div>
+
 <!-- ═══ ONBOARDING ══════════════════════════════════ -->
-<div id="onboarding">
+<div id="onboarding" style="display:none">
   <div class="ob-orb ob-orb-1"></div>
   <div class="ob-orb ob-orb-2"></div>
   <div class="ob-wrap">
@@ -1493,14 +1525,28 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
           <span class="guc-check">✅</span>
         </div>
 
-        <!-- ── BOTÃO GOOGLE — renderizado pelo GIS ── -->
-        <!--
-          O GIS injeta um <iframe> aqui com o botão oficial do Google.
-          theme="filled_black" combina com o fundo escuro do onboarding.
-          O botão é renderizado na função initGoogleSignIn() abaixo.
-        -->
+        <!-- ── BOTÃO GOOGLE — Firebase Auth ── -->
         <div id="google-btn-wrap">
-          <div class="gis-loading" id="gis-placeholder">Carregando login com Google…</div>
+          <button onclick="signInWithGoogle()" id="google-signin-btn"
+            style="width:100%;display:flex;align-items:center;gap:12px;
+                   padding:13px 16px;border-radius:12px;cursor:pointer;
+                   font-size:14px;font-weight:600;font-family:inherit;
+                   background:rgba(255,255,255,0.07);
+                   border:1px solid rgba(255,255,255,0.13);
+                   color:rgba(255,255,255,0.9);
+                   transition:background .2s,border-color .2s,transform .15s;"
+            onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+            onmouseout="this.style.background='rgba(255,255,255,0.07)'"
+            onmousedown="this.style.transform='scale(.98)'"
+            onmouseup="this.style.transform='scale(1)'">
+            <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Continuar com Google
+          </button>
         </div>
 
 
@@ -2926,176 +2972,173 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   GOOGLE IDENTITY SERVICES (GIS) — IMPLEMENTAÇÃO PADRÃO
-   Documentação oficial: https://developers.google.com/identity/gsi/web
+   FIREBASE — AUTH + FIRESTORE
    ═══════════════════════════════════════════════════════════════ */
 
-/**
- * CLIENT_ID — substitua pelo seu ID gerado no Google Cloud Console.
- * Enquanto for "SEU_CLIENT_ID...", o botão renderiza em modo DEMO.
- */
-const GOOGLE_CLIENT_ID = document.querySelector('meta[name="google-client-id"]')
-  ?.getAttribute('content') || '';
+const firebaseConfig = {
+  apiKey: "AIzaSyDkrUbcnPCS5_5d6QjRgIrncBVgUA32EZQ",
+  authDomain: "salaryman-86543.firebaseapp.com",
+  projectId: "salaryman-86543",
+  storageBucket: "salaryman-86543.firebasestorage.app",
+  messagingSenderId: "132123697128",
+  appId: "1:132123697128:web:0a90d9a5d9811c7c598e5d"
+};
 
-const IS_DEMO = !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('SEU_');
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb   = firebase.firestore();
+let   fbUser = null; // usuário Firebase atual
 
-/**
- * Chamada automaticamente pelo GIS após o carregamento do script.
- * O GIS expõe window.google.accounts.id após o carregamento assíncrono.
- */
-function initGoogleSignIn() {
-  const wrap = document.getElementById('google-btn-wrap');
-  const placeholder = document.getElementById('gis-placeholder');
+/* ── FUNÇÕES FIRESTORE ──────────────────────────────── */
 
-  if (IS_DEMO) {
-    /* ── MODO DEMO (sem Client ID real) ─────────────────────────
-       Renderiza um botão visual que simula o fluxo para o protótipo.
-       Em produção, remova este bloco e use apenas o código abaixo. */
-    placeholder.style.animation = 'none';
-    placeholder.style.opacity = '1';
-    placeholder.innerHTML = `
-      <button onclick="handleGoogleDemo()"
-        style="width:100%;display:flex;align-items:center;gap:12px;
-               padding:12px 16px;border-radius:12px;cursor:pointer;
-               font-size:14px;font-weight:600;font-family:inherit;
-               background:rgba(255,255,255,0.07);
-               border:1px solid rgba(255,255,255,0.13);
-               color:rgba(255,255,255,0.88);
-               transition:background .2s,border-color .2s,transform .15s;
-               box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);"
-        onmouseover="this.style.background='rgba(255,255,255,0.11)';this.style.borderColor='rgba(255,255,255,0.22)'"
-        onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.borderColor='rgba(255,255,255,0.13)'"
-        onmousedown="this.style.transform='scale(.98)'"
-        onmouseup="this.style.transform='scale(1)'">
-        <svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0">
-          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        </svg>
-        Continuar com Google
-      </button>`;
-    return;
+/** Carrega perfil do Firestore para localStorage */
+async function loadProfileFromFirestore(uid) {
+  try {
+    const doc = await fbDb.collection('users').doc(uid).get();
+    if (!doc.exists) return false;
+    const d = doc.data();
+    if (d.sal)          localStorage.setItem('sm_sal', d.sal);
+    if (d.payday)       localStorage.setItem('sm_payday', d.payday);
+    if (d.fixos)        localStorage.setItem('sm_fixos', d.fixos);
+    if (d.fixos_list)   localStorage.setItem('sm_fixos_list', d.fixos_list);
+    if (d.prof)         localStorage.setItem('sm_prof', d.prof);
+    if (d.trial_start)  localStorage.setItem('sm_trial_start', d.trial_start);
+    if (d.rpt_phone)    localStorage.setItem('sm_rpt_phone', d.rpt_phone);
+    if (d.rpt_freq)     localStorage.setItem('sm_rpt_freq', d.rpt_freq);
+    if (d.rpt_auto)     localStorage.setItem('sm_rpt_auto', d.rpt_auto);
+    if (d.rpt_next)     localStorage.setItem('sm_rpt_next', d.rpt_next);
+    if (d.theme)        localStorage.setItem('sm_theme', d.theme);
+    return true;
+  } catch(e) { console.warn('[FB] loadProfile error:', e); return false; }
+}
+
+/** Carrega gastos do Firestore para localStorage */
+async function loadExpensesFromFirestore(uid) {
+  try {
+    const snap = await fbDb.collection('users').doc(uid).collection('expenses')
+      .orderBy('ts','desc').get();
+    const exps = snap.docs.map(d => d.data());
+    localStorage.setItem('sm_expenses', JSON.stringify(exps));
+  } catch(e) { console.warn('[FB] loadExpenses error:', e); }
+}
+
+/** Salva perfil no Firestore */
+async function saveProfileToFirestore() {
+  if (!fbUser) return;
+  const data = {
+    sal:         localStorage.getItem('sm_sal') || '',
+    payday:      localStorage.getItem('sm_payday') || '',
+    fixos:       localStorage.getItem('sm_fixos') || '',
+    fixos_list:  localStorage.getItem('sm_fixos_list') || '',
+    prof:        localStorage.getItem('sm_prof') || '',
+    trial_start: localStorage.getItem('sm_trial_start') || '',
+    rpt_phone:   localStorage.getItem('sm_rpt_phone') || '',
+    rpt_freq:    localStorage.getItem('sm_rpt_freq') || '',
+    rpt_auto:    localStorage.getItem('sm_rpt_auto') || '',
+    rpt_next:    localStorage.getItem('sm_rpt_next') || '',
+    theme:       localStorage.getItem('sm_theme') || '',
+    email:       fbUser.email || '',
+    name:        fbUser.displayName || '',
+    updatedAt:   new Date().toISOString()
+  };
+  try { await fbDb.collection('users').doc(fbUser.uid).set(data, { merge: true }); }
+  catch(e) { console.warn('[FB] saveProfile error:', e); }
+}
+
+/** Salva um gasto no Firestore */
+async function saveExpToFirestore(exp) {
+  if (!fbUser) return;
+  try { await fbDb.collection('users').doc(fbUser.uid).collection('expenses').doc(String(exp.id)).set(exp); }
+  catch(e) { console.warn('[FB] saveExp error:', e); }
+}
+
+/** Remove um gasto do Firestore */
+async function deleteExpFromFirestore(id) {
+  if (!fbUser) return;
+  try { await fbDb.collection('users').doc(fbUser.uid).collection('expenses').doc(String(id)).delete(); }
+  catch(e) { console.warn('[FB] deleteExp error:', e); }
+}
+
+/* ── AUTH: GOOGLE SIGN-IN ──────────────────────────── */
+
+async function signInWithGoogle() {
+  const btn = document.getElementById('google-signin-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Entrando…'; }
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await fbAuth.signInWithPopup(provider);
+    // onAuthStateChanged vai cuidar do resto
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = ''; btn.textContent = 'Tentar novamente'; }
+    toast('⚠️ Erro no login: ' + (e.message || 'tente novamente'), 'warn');
+  }
+}
+
+/** Chamado pelo onAuthStateChanged ao detectar usuário logado */
+async function handleFirebaseUser(user) {
+  fbUser = user;
+  localStorage.setItem('sm_logged_in', '1');
+
+  // Mostra card de boas-vindas no onboarding (caso esteja visível)
+  const gucName = document.getElementById('guc-name');
+  const gucEmail = document.getElementById('guc-email');
+  const gucAv    = document.getElementById('guc-av');
+  if (gucName)  gucName.textContent  = user.displayName || '';
+  if (gucEmail) gucEmail.textContent = user.email || '';
+  if (gucAv && user.photoURL) {
+    gucAv.outerHTML = `<img src="${user.photoURL}" class="guc-avatar" id="guc-av" alt="${user.displayName}">`;
   }
 
-  /* ── PRODUÇÃO (com Client ID real) ──────────────────────────
-     Inicializa o GIS e renderiza o botão oficial. */
-  if (typeof google === 'undefined' || !google.accounts) {
-    /* Script ainda não carregou — mostra botão demo como fallback */
-    placeholder.style.animation = 'none';
-    placeholder.style.opacity = '1';
-    placeholder.innerHTML = `<button onclick="handleGoogleDemo()" style="width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.13);color:rgba(255,255,255,0.88)"><svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continuar com Google</button>`;
-    return;
-  }
+  // Verifica se já tem dados no Firestore
+  const hasData = await loadProfileFromFirestore(user.uid);
 
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    callback: handleCredentialResponse,  // chamada ao fazer login
-    auto_select: false,                  // não logar automaticamente
-    cancel_on_tap_outside: true,
-  });
-
-  /* Remove o placeholder e renderiza o botão oficial do Google */
-  placeholder.remove();
-  google.accounts.id.renderButton(wrap, {
-    type: 'standard',
-    theme: 'filled_black',     // fundo preto — combina com o onboarding escuro
-    size: 'large',
-    text: 'signin_with',       // "Fazer login com o Google"
-    shape: 'rectangular',
-    logo_alignment: 'left',
-    width: wrap.offsetWidth || 340,
-  });
-
-  /* One Tap — popup discreto para login com 1 clique (opcional) */
-  // google.accounts.id.prompt(); // descomente para ativar One Tap
-}
-
-/**
- * Callback chamado pelo GIS quando o usuário autentica com Google.
- * "response.credential" é um JWT assinado pelo Google.
- * @param {Object} response — { credential: string }
- */
-function handleCredentialResponse(response) {
-  /* Decodifica o payload do JWT (não verificar aqui — faça isso no servidor) */
-  const payload = JSON.parse(atob(response.credential.split('.')[1]));
-
-  /* payload contém: sub, name, email, picture, email_verified, etc. */
-  const user = {
-    id:      payload.sub,
-    name:    payload.name,
-    email:   payload.email,
-    picture: payload.picture,
-    token:   response.credential, // enviar ao backend para verificar
-  };
-
-  console.log('[GIS] Usuário autenticado:', user.name, user.email);
-  applyGoogleUser(user);
-}
-
-/**
- * Simula o fluxo para o protótipo (DEMO sem Client ID real).
- */
-function handleGoogleDemo() {
-  const demoUser = {
-    name: 'Mateus Gabriel', email: 'mateusgabrielsanto@gmail.com', picture: null,
-  };
-  applyGoogleUser(demoUser);
-}
-
-/**
- * Exibe o card de boas-vindas com os dados do usuário do Google
- * e avança automaticamente para o próximo passo.
- */
-function applyGoogleUser(user) {
-  /* Preenche o card de usuário */
-  document.getElementById('guc-name').textContent  = user.name;
-  document.getElementById('guc-email').textContent = user.email;
-
-  const avEl = document.getElementById('guc-av');
-  if (user.picture) {
-    avEl.outerHTML = `<img src="${user.picture}" class="guc-avatar" id="guc-av" alt="${user.name}">`;
+  if (hasData) {
+    // Usuário já cadastrado — carrega gastos e abre o app
+    await loadExpensesFromFirestore(user.uid);
+    hideLanding();
+    toast('✅ Bem-vindo de volta, ' + (user.displayName?.split(' ')[0] || '') + '!', 'ok');
+    launchApp();
   } else {
-    avEl.textContent = user.name.charAt(0).toUpperCase();
+    // Primeiro acesso — mostra onboarding step 2
+    hideLanding();
+    showOnboarding();
+    document.getElementById('guc')?.classList.add('visible');
+    document.getElementById('google-btn-wrap').style.display = 'none';
+    setTimeout(() => goOb(2), 900);
   }
-
-  /* Mostra o card */
-  document.getElementById('guc').classList.add('visible');
-
-  /* Esconde o botão de login e o divider */
-  document.getElementById('google-btn-wrap').style.display = 'none';
-
-  toast('✅ Login com Google realizado!', 'ok');
-
-  /* Se já tem conta cadastrada → vai direto para o app */
-  if (localStorage.getItem('sm_logged_in')) {
-    setTimeout(() => launchApp(), 700);
-    return;
-  }
-
-  /* Primeira vez → avança para o próximo passo após 1.2s */
-  setTimeout(() => goOb(2), 1200);
 }
 
+function hideLanding() {
+  const ls = document.getElementById('loading-screen');
+  if (ls) { ls.classList.add('hide'); setTimeout(() => ls.style.display='none', 400); }
+}
+
+function showOnboarding() {
+  const ob = document.getElementById('onboarding');
+  if (ob) ob.style.display = 'flex';
+}
+
+/* ── LOGIN POR E-MAIL (sem Google) ─────────────────── */
+
 /**
- * Login por e-mail + senha (sem Google).
+ * Login por e-mail (Firebase Email/Password).
  */
 function loginEmail() {
-  const email = document.getElementById('ob-email')?.value;
+  const email = document.getElementById('ob-email')?.value?.trim();
   const pass  = document.getElementById('ob-pass')?.value;
   if (!email || !pass) { toast('⚠️ Preencha e-mail e senha', 'warn'); return; }
-  if (localStorage.getItem('sm_logged_in')) {
-    toast('✅ Bem-vindo de volta!', 'ok');
-    setTimeout(() => launchApp(), 500);
-    return;
-  }
-  toast('✅ Entrando…', 'ok');
-  setTimeout(() => goOb(2), 800);
+  toast('⏳ Entrando…', 'ok');
+  fbAuth.signInWithEmailAndPassword(email, pass)
+    .catch(() => {
+      // Tenta criar conta se não existir
+      fbAuth.createUserWithEmailAndPassword(email, pass)
+        .catch(err => toast('⚠️ ' + err.message, 'warn'));
+    });
+  // onAuthStateChanged cuida do resto
 }
 
 /**
- * Abre o app e garante que a tela inicial (Home) está ativa.
- * Usada pelo enterApp(), auto-login e retorno do Google.
+ * Abre o app na aba Início.
  */
 function launchApp() {
   document.getElementById('onboarding').style.display = 'none';
@@ -3107,8 +3150,6 @@ function launchApp() {
     app.style.opacity = '1';
     setTimeout(() => app.style.transition = '', 450);
   });
-
-  // Força aba Início ativa
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const homeScreen = document.getElementById('tab-home');
   if (homeScreen) homeScreen.classList.add('active');
@@ -3116,30 +3157,12 @@ function launchApp() {
   const homeBtn = document.querySelector('.nav-tab[onclick*="home"]');
   if (homeBtn) homeBtn.classList.add('active');
   window.scrollTo(0, 0);
-
-  // Inicializa componentes
   initChart();
   initTrial();
   renderDashboard();
   setTimeout(renderInvPath, 600);
   setTimeout(checkAutoSend, 1200);
 }
-
-/* Inicializa o GIS assim que o script carregar (ou imediatamente se já carregou) */
-(function waitForGIS() {
-  if (typeof google !== 'undefined' && google.accounts) {
-    initGoogleSignIn(); return;
-  }
-  let elapsed = 0;
-  const iv = setInterval(() => {
-    elapsed += 200;
-    if (typeof google !== 'undefined' && google.accounts) {
-      clearInterval(iv); initGoogleSignIn();
-    } else if (elapsed >= 6000) {
-      clearInterval(iv); initGoogleSignIn(); // chama com google indefinido — o guard interno trata
-    }
-  }, 200);
-})();
 
 /* ── CUSTOM SELECT ────────────────────────── */
 function toggleObSel(trigger) {
@@ -3182,6 +3205,7 @@ function obSaveSalary(){
   const payday = parseInt(paydayText.replace(/\D/g,'')) || 30;
   localStorage.setItem('sm_sal', sal);
   localStorage.setItem('sm_payday', payday);
+  saveProfileToFirestore();
   goOb(3);
 }
 
@@ -3197,6 +3221,7 @@ function obSaveFixedExpenses(){
   });
   localStorage.setItem('sm_fixos', total);
   localStorage.setItem('sm_fixos_list', JSON.stringify(fixos));
+  saveProfileToFirestore();
   goOb(4);
 }
 
@@ -3209,6 +3234,7 @@ function pickProf(card){
 function obSaveProf(){
   if(!obProfSel){ toast('Selecione sua profissão ou pule','warn'); return; }
   localStorage.setItem('sm_prof', obProfSel);
+  saveProfileToFirestore();
   goOb(6);
 }
 
@@ -3230,6 +3256,7 @@ function obSavePhone(){
   localStorage.setItem('sm_rpt_auto', '1');
   const next = new Date(); next.setDate(next.getDate()+freqDays(obFreqSel)); next.setHours(21,0,0,0);
   localStorage.setItem('sm_rpt_next', next.toISOString());
+  saveProfileToFirestore();
   enterApp();
 }
 function addFix(){
@@ -3244,7 +3271,8 @@ function updOb(){
   document.getElementById('ob-s').textContent='R$ '+(s*.2).toFixed(0);
 }
 function enterApp(){
-  localStorage.setItem('sm_logged_in','1'); // marca sessão para auto-login futuro
+  localStorage.setItem('sm_logged_in','1');
+  saveProfileToFirestore();
   toast('🎉 Bem-vindo ao SalaryMan!','ok');
   launchApp();
 }
@@ -3463,6 +3491,7 @@ function saveExp(){
   const exps = loadExps();
   exps.unshift(tx); // newest first
   saveExps(exps);
+  saveExpToFirestore(tx); // sync Firebase
 
   renderDashboard();
   toast('✅ R$ ' + v.toFixed(2).replace('.',',') + ' registrado!', 'ok');
@@ -3626,6 +3655,7 @@ function renderAllExps(list) {
 function deleteExp(id) {
   const exps = loadExps().filter(e => e.id !== id);
   saveExps(exps);
+  deleteExpFromFirestore(id); // sync Firebase
   renderDashboard();
   toast('🗑 Gasto removido', 'warn');
 }
@@ -4893,39 +4923,35 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── LOGOUT ───────────────────────────────────── */
 function logOut() {
   toast('👋 Até logo!', 'warn');
-  // Limpa chaves de sessão para que o onboarding apareça no próximo acesso
-  ['sm_logged_in','sm_trial_start','sm_prof', LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
+  fbAuth.signOut();
+  fbUser = null;
+  // Limpa cache local
+  ['sm_logged_in','sm_sal','sm_payday','sm_fixos','sm_fixos_list','sm_prof',
+   'sm_trial_start','sm_expenses',LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
   setTimeout(() => {
     document.getElementById('app').style.display = 'none';
-    document.getElementById('onboarding').style.display = 'flex';
-    // Volta para o passo 1 do onboarding
     document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
-    document.getElementById('os1').classList.add('active');
+    document.getElementById('os1')?.classList.add('active');
+    // Reinicia o botão Google
+    const btn = document.getElementById('google-signin-btn');
+    if(btn){ btn.disabled=false; btn.innerHTML=`<svg width="20" height="20" viewBox="0 0 48 48" style="flex-shrink:0"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continuar com Google`; }
+    document.getElementById('google-btn-wrap').style.display = '';
+    document.getElementById('guc')?.classList.remove('visible');
+    showOnboarding();
   }, 700);
 }
 
-/* ── AUTO-LOGIN: vai direto para o app se já fez login antes ── */
-(function autoLogin(){
-  if (!localStorage.getItem('sm_logged_in')) return; // primeira vez → mostra onboarding
-
-  const ob  = document.getElementById('onboarding');
-  const app = document.getElementById('app');
-
-  // Esconde onboarding instantaneamente (sem flash)
-  ob.style.display = 'none';
-
-  // Entra no app com fade suave
-  app.style.opacity = '0';
-  app.style.display = 'block';
-  requestAnimationFrame(() => {
-    app.style.transition = 'opacity .35s ease';
-    app.style.opacity = '1';
-    setTimeout(() => app.style.transition = '', 400);
-  });
-
-  // Abre direto na tela inicial
-  launchApp();
-})();
+/* ── FIREBASE AUTH STATE — detecta login em qualquer dispositivo ── */
+fbAuth.onAuthStateChanged(async (user) => {
+  if (user) {
+    // Usuário logado → carrega dados e abre o app
+    await handleFirebaseUser(user);
+  } else {
+    // Não logado → mostra onboarding
+    hideLanding();
+    showOnboarding();
+  }
+});
 </script>
 </body>
 </html>
