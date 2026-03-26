@@ -2358,9 +2358,17 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
   <div class="screen" id="tab-perfil">
     <div class="profile-hero">
       <div class="ph-orb"></div>
-      <div class="ph-avatar">M</div>
-      <div class="ph-name">Mateus Gabriel</div>
-      <div class="ph-email">mateusgabrielsanto@gmail.com</div>
+      <div class="ph-avatar" id="ph-avatar">M</div>
+      <div style="display:flex;align-items:center;gap:8px;position:relative;z-index:1">
+        <div class="ph-name" id="ph-name">—</div>
+        <button onclick="startEditName()" id="ph-edit-btn" style="background:rgba(255,255,255,0.1);border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,0.7)">✏️</button>
+      </div>
+      <div id="ph-name-edit" style="display:none;gap:8px;align-items:center;position:relative;z-index:1;margin-top:4px">
+        <input id="ph-name-input" type="text" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:8px 12px;color:#fff;font-size:15px;font-weight:700;width:180px;outline:none" placeholder="Seu nome" />
+        <button onclick="saveEditName()" style="background:#05C98A;border:none;border-radius:10px;padding:8px 14px;color:#fff;font-weight:700;cursor:pointer;font-size:13px">Salvar</button>
+        <button onclick="cancelEditName()" style="background:rgba(255,255,255,0.1);border:none;border-radius:10px;padding:8px 10px;color:rgba(255,255,255,0.6);cursor:pointer;font-size:13px">✕</button>
+      </div>
+      <div class="ph-email" id="ph-email">—</div>
       <div class="ph-plan"><span class="badge bg-gray" style="margin-top:8px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff" id="ph-plan-badge">⏳ Teste gratuito</span></div>
     </div>
 
@@ -3107,7 +3115,7 @@ async function handleFirebaseUser(user) {
   localStorage.setItem('sm_uid', user.uid);
   localStorage.setItem('sm_logged_in', '1');
 
-  // Mostra card de boas-vindas no onboarding (caso esteja visível)
+  // Atualiza card de onboarding
   const gucName = document.getElementById('guc-name');
   const gucEmail = document.getElementById('guc-email');
   const gucAv    = document.getElementById('guc-av');
@@ -3115,6 +3123,21 @@ async function handleFirebaseUser(user) {
   if (gucEmail) gucEmail.textContent = user.email || '';
   if (gucAv && user.photoURL) {
     gucAv.outerHTML = `<img src="${user.photoURL}" class="guc-avatar" id="guc-av" alt="${user.displayName}">`;
+  }
+
+  // Atualiza tela de perfil com dados reais do usuário logado
+  const phName   = document.getElementById('ph-name');
+  const phEmail  = document.getElementById('ph-email');
+  const phAvatar = document.getElementById('ph-avatar');
+  if (phName)   phName.textContent  = user.displayName || '';
+  if (phEmail)  phEmail.textContent = user.email || '';
+  if (phAvatar) {
+    const initial = (user.displayName || '?')[0].toUpperCase();
+    if (user.photoURL) {
+      phAvatar.outerHTML = `<img src="${user.photoURL}" class="ph-avatar" id="ph-avatar" alt="${user.displayName}" style="border-radius:50%;width:72px;height:72px;object-fit:cover;">`;
+    } else {
+      phAvatar.textContent = initial;
+    }
   }
 
   // Verifica se já tem dados no Firestore
@@ -4947,6 +4970,51 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   zone.addEventListener('click', () => document.getElementById('imp-file-input').click());
 });
+
+/* ── EDITAR NOME ─────────────────────────────── */
+function startEditName() {
+  const input = document.getElementById('ph-name-input');
+  const nameEl = document.getElementById('ph-name');
+  if (input) input.value = nameEl?.textContent || '';
+  document.getElementById('ph-name-edit').style.display = 'flex';
+  document.getElementById('ph-name').style.display = 'none';
+  document.getElementById('ph-edit-btn').style.display = 'none';
+  input?.focus();
+}
+
+function cancelEditName() {
+  document.getElementById('ph-name-edit').style.display = 'none';
+  document.getElementById('ph-name').style.display = '';
+  document.getElementById('ph-edit-btn').style.display = '';
+}
+
+async function saveEditName() {
+  const input = document.getElementById('ph-name-input');
+  const newName = input?.value.trim();
+  if (!newName) { toast('Digite um nome válido', 'warn'); return; }
+
+  // Atualiza Firebase Auth
+  if (fbUser) {
+    try {
+      await fbUser.updateProfile({ displayName: newName });
+    } catch(e) { console.warn('updateProfile:', e); }
+  }
+
+  // Atualiza visual
+  const phName = document.getElementById('ph-name');
+  if (phName) phName.textContent = newName;
+  const gucName = document.getElementById('guc-name');
+  if (gucName) gucName.textContent = newName;
+
+  // Salva no Firestore
+  if (fbUser) {
+    fbDb.collection('users').doc(fbUser.uid).update({ name: newName })
+      .catch(e => console.warn('Firestore update name:', e));
+  }
+
+  cancelEditName();
+  toast('✅ Nome atualizado!', 'ok');
+}
 
 /* ── LOGOUT ───────────────────────────────────── */
 function logOut() {
