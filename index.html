@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<!-- Pré-conecta ao CDN do Firebase para reduzir latência -->
+<link rel="preconnect" href="https://unpkg.com">
+<link rel="preconnect" href="https://firestore.googleapis.com">
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com">
+<link rel="dns-prefetch" href="https://unpkg.com">
 <title>SalaryMan — Controle Financeiro Pessoal</title>
 <meta name="description" content="Organize seu dinheiro, controle gastos, acompanhe cartões e invista com inteligência. O app de finanças feito para o trabalhador brasileiro.">
 <meta name="theme-color" content="#05C98A">
@@ -3135,12 +3140,29 @@ async function handleFirebaseUser(user) {
     }
   }
 
-  // Verifica se já tem dados no Firestore
-  const hasData = await loadProfileFromFirestore(user.uid);
+  // Se já tem cache local, abre o app imediatamente (sem esperar Firestore)
+  const hasCachedData = localStorage.getItem('sm_sal');
+  if (hasCachedData) {
+    hideLanding();
+    toast('✅ Bem-vindo de volta, ' + (user.displayName?.split(' ')[0] || '') + '!', 'ok');
+    launchApp();
+    // Atualiza dados do Firestore em background (sem bloquear a UI)
+    Promise.all([
+      loadProfileFromFirestore(user.uid),
+      loadExpensesFromFirestore(user.uid)
+    ]).then(([hasData]) => {
+      if (hasData) renderDashboard(); // Atualiza silenciosamente
+    });
+    return;
+  }
+
+  // Sem cache: carrega Firestore em paralelo e aguarda
+  const [hasData] = await Promise.all([
+    loadProfileFromFirestore(user.uid),
+    loadExpensesFromFirestore(user.uid)
+  ]);
 
   if (hasData) {
-    // Usuário já cadastrado — carrega gastos e abre o app
-    await loadExpensesFromFirestore(user.uid);
     hideLanding();
     toast('✅ Bem-vindo de volta, ' + (user.displayName?.split(' ')[0] || '') + '!', 'ok');
     launchApp();
