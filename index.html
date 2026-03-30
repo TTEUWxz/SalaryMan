@@ -2004,93 +2004,11 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
         <div class="cc-sum-cell"><div class="cc-sum-val" style="color:var(--g1)" id="cc-total-avail">R$ 6.921</div><div class="cc-sum-lbl">Disponível</div></div>
       </div>
 
-      <!-- Card visuals carousel -->
-      <div class="cc-scroll" id="ccScroll">
-        <div class="cc-card" style="background:linear-gradient(135deg,#6D28D9,#8B5CF6)" onclick="openCardDetail('nubank')">
-          <div class="cc-card-shine"></div>
-          <span class="cc-card-chip">💜</span>
-          <div class="cc-card-num">•••• •••• •••• 4242</div>
-          <div class="cc-card-bot">
-            <div class="cc-card-name">Nubank</div>
-            <div class="cc-card-limit">R$ 1.847 / R$ 5.000<br><span style="font-size:10px;opacity:.7">Fecha dia 3 · Vence dia 10</span></div>
-          </div>
-        </div>
-        <div class="cc-card danger" style="background:linear-gradient(135deg,#C2410C,#F97316)" onclick="openCardDetail('itau')">
-          <div class="cc-card-shine"></div>
-          <div class="cc-card-alert">⚠ 89%</div>
-          <span class="cc-card-chip">🧡</span>
-          <div class="cc-card-num">•••• •••• •••• 7891</div>
-          <div class="cc-card-bot">
-            <div class="cc-card-name">Itaú</div>
-            <div class="cc-card-limit">R$ 892 / R$ 1.000<br><span style="font-size:10px;opacity:.7">Fecha dia 20 · Vence dia 27</span></div>
-          </div>
-        </div>
-        <div class="cc-card" style="background:linear-gradient(135deg,#065F46,#059669)" onclick="openCardDetail('inter')">
-          <div class="cc-card-shine"></div>
-          <span class="cc-card-chip">💚</span>
-          <div class="cc-card-num">•••• •••• •••• 1234</div>
-          <div class="cc-card-bot">
-            <div class="cc-card-name">Inter</div>
-            <div class="cc-card-limit">R$ 340 / R$ 4.000<br><span style="font-size:10px;opacity:.7">Fecha dia 15 · Vence dia 22</span></div>
-          </div>
-        </div>
-      </div>
+      <!-- Card visuals carousel (preenchido por renderCards()) -->
+      <div class="cc-scroll" id="ccScroll"></div>
 
-      <!-- Cards list -->
-      <div class="cc-list">
-        <div class="sec-label" style="margin-bottom:12px">Detalhes por cartão</div>
-
-        <!-- Nubank -->
-        <div class="cc-item" onclick="openCardDetail('nubank')">
-          <div class="cc-item-top">
-            <div class="cc-item-dot" style="background:#8B5CF6"></div>
-            <div class="cc-item-name">Nubank <span style="font-weight:400;color:var(--text3);font-size:12px">••4242</span></div>
-            <div class="cc-item-bill">R$ 1.847</div>
-          </div>
-          <div class="cc-item-bar"><div class="cc-item-fill" style="width:37%;background:#8B5CF6"></div></div>
-          <div class="cc-item-meta">
-            <span>37% do limite usado</span>
-            <span>Fecha <b>dia 3</b> · Vence <b>dia 10</b></span>
-          </div>
-        </div>
-
-        <!-- Itaú -->
-        <div class="cc-item" onclick="openCardDetail('itau')">
-          <div class="cc-item-top">
-            <div class="cc-item-dot" style="background:#F97316"></div>
-            <div class="cc-item-name">Itaú <span style="font-weight:400;color:var(--text3);font-size:12px">••7891</span></div>
-            <div class="cc-item-bill" style="color:var(--red)">R$ 892</div>
-          </div>
-          <div class="cc-item-bar"><div class="cc-item-fill" style="width:89%;background:var(--red)"></div></div>
-          <div class="cc-item-meta">
-            <span style="color:var(--red);font-weight:700">⚠ 89% do limite — atenção!</span>
-            <span>Fecha <b>dia 20</b> · Vence <b>dia 27</b></span>
-          </div>
-        </div>
-
-        <!-- Inter -->
-        <div class="cc-item" onclick="openCardDetail('inter')">
-          <div class="cc-item-top">
-            <div class="cc-item-dot" style="background:#059669"></div>
-            <div class="cc-item-name">Inter <span style="font-weight:400;color:var(--text3);font-size:12px">••1234</span></div>
-            <div class="cc-item-bill" style="color:var(--g1)">R$ 340</div>
-          </div>
-          <div class="cc-item-bar"><div class="cc-item-fill" style="width:9%;background:var(--g1)"></div></div>
-          <div class="cc-item-meta">
-            <span style="color:var(--g1)">✓ 9% do limite — saudável</span>
-            <span>Fecha <b>dia 15</b> · Vence <b>dia 22</b></span>
-          </div>
-        </div>
-
-        <!-- Add card button -->
-        <button class="cc-add-btn" onclick="openSheet('addCardSheet')">
-          <div class="cc-add-icon">＋</div>
-          <div class="cc-add-text">
-            <div class="t">Adicionar cartão</div>
-            <div class="s">Cadastre um novo cartão de crédito</div>
-          </div>
-        </button>
-      </div>
+      <!-- Cards list (preenchido por renderCards()) -->
+      <div class="cc-list" id="cc-list-container"></div>
     </div><!-- /gsv-cartoes -->
 
     <!-- ── IMPORTAR sub-view ── -->
@@ -2733,8 +2651,8 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
     </div>
 
     <div class="sheet-actions">
-      <button class="btn btn-ghost" onclick="closeSheet('cardDetailSheet')">Fechar</button>
-      <button class="btn btn-primary" onclick="toast('✅ Fatura marcada como paga!','ok');closeSheet('cardDetailSheet')">💰 Pagar fatura</button>
+      <button class="btn btn-ghost" onclick="if(currentCardId)deleteCard(currentCardId)" style="color:var(--red);border-color:var(--red)">🗑️ Excluir</button>
+      <button class="btn btn-primary" onclick="closeSheet('cardDetailSheet')">Fechar</button>
     </div>
   </div>
 </div>
@@ -3035,6 +2953,7 @@ async function loadProfileFromFirestore(uid) {
     if (d.rpt_auto)     localStorage.setItem('sm_rpt_auto', d.rpt_auto);
     if (d.rpt_next)     localStorage.setItem('sm_rpt_next', d.rpt_next);
     if (d.theme)        localStorage.setItem('sm_theme', d.theme);
+    if (d.cards)        localStorage.setItem('sm_cards', d.cards);
     return true;
   } catch(e) { console.warn('[FB] loadProfile error:', e); return false; }
 }
@@ -3064,6 +2983,7 @@ async function saveProfileToFirestore() {
     rpt_auto:    localStorage.getItem('sm_rpt_auto') || '',
     rpt_next:    localStorage.getItem('sm_rpt_next') || '',
     theme:       localStorage.getItem('sm_theme') || '',
+    cards:       localStorage.getItem('sm_cards') || '[]',
     email:       fbUser.email || '',
     name:        fbUser.displayName || '',
     updatedAt:   new Date().toISOString()
@@ -3149,9 +3069,10 @@ async function handleFirebaseUser(user) {
     // Atualiza dados do Firestore em background (sem bloquear a UI)
     Promise.all([
       loadProfileFromFirestore(user.uid),
-      loadExpensesFromFirestore(user.uid)
+      loadExpensesFromFirestore(user.uid),
+      loadCardsFromFirestore(user.uid)
     ]).then(([hasData]) => {
-      if (hasData) renderDashboard(); // Atualiza silenciosamente
+      if (hasData) { renderDashboard(); renderCards(); }
     });
     return;
   }
@@ -3159,7 +3080,8 @@ async function handleFirebaseUser(user) {
   // Sem cache: carrega Firestore em paralelo e aguarda
   const [hasData] = await Promise.all([
     loadProfileFromFirestore(user.uid),
-    loadExpensesFromFirestore(user.uid)
+    loadExpensesFromFirestore(user.uid),
+    loadCardsFromFirestore(user.uid)
   ]);
 
   if (hasData) {
@@ -3228,6 +3150,7 @@ function launchApp() {
   initChart();
   initTrial();
   renderDashboard();
+  renderCards();
   setTimeout(renderInvPath, 600);
   setTimeout(checkAutoSend, 1200);
 }
@@ -4085,42 +4008,179 @@ function switchGastosTab(tab, btn) {
   if (tab === 'cartoes') initCCScroll();
 }
 
-const CC_CARDS_DATA = {
-  nubank: {
-    name:'Nubank', num:'4242', emoji:'💜',
-    color:'linear-gradient(135deg,#6D28D9,#8B5CF6)',
-    bill:1847, limit:5000, closeDay:3, dueDay:10
-  },
-  itau: {
-    name:'Itaú', num:'7891', emoji:'🧡',
-    color:'linear-gradient(135deg,#C2410C,#F97316)',
-    bill:892, limit:1000, closeDay:20, dueDay:27
-  },
-  inter: {
-    name:'Inter', num:'1234', emoji:'💚',
-    color:'linear-gradient(135deg,#065F46,#059669)',
-    bill:340, limit:4000, closeDay:15, dueDay:22
+/* ══════════════════════════════════════════════════════
+   CARTÕES DE CRÉDITO — lógica completa
+   ══════════════════════════════════════════════════════ */
+
+let currentCardId = null; // cartão aberto no detail sheet
+
+function getCards() {
+  try { return JSON.parse(localStorage.getItem('sm_cards') || '[]'); }
+  catch { return []; }
+}
+
+function saveCardsLocal(cards) {
+  localStorage.setItem('sm_cards', JSON.stringify(cards));
+}
+
+function cardBill(cardId) {
+  // Soma gastos do mês atual vinculados a este cartão
+  const exps = JSON.parse(localStorage.getItem('sm_expenses') || '[]');
+  const now = new Date();
+  return exps
+    .filter(e => e.card === cardId &&
+      new Date(e.ts).getMonth() === now.getMonth() &&
+      new Date(e.ts).getFullYear() === now.getFullYear())
+    .reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+}
+
+function cardEmojiFromColor(color) {
+  if (color.includes('6D28D9') || color.includes('8B5CF6')) return '💜';
+  if (color.includes('C2410C') || color.includes('F97316')) return '🧡';
+  if (color.includes('065F46') || color.includes('059669')) return '💚';
+  if (color.includes('1A4A8A') || color.includes('3D7EFF')) return '💙';
+  if (color.includes('831843') || color.includes('EC4899')) return '💗';
+  return '💳';
+}
+
+function renderCards() {
+  const cards   = getCards();
+  const scroll  = document.getElementById('ccScroll');
+  const listEl  = document.getElementById('cc-list-container');
+  if (!scroll || !listEl) return;
+
+  // Calcula totais reais
+  let totalBill = 0, totalLimit = 0;
+  cards.forEach(c => {
+    const bill = cardBill(c.id);
+    totalBill  += bill;
+    totalLimit += c.limit;
+  });
+  const totalAvail = Math.max(0, totalLimit - totalBill);
+
+  // Atualiza summary bar
+  const sumBill  = document.getElementById('cc-total-bill');
+  const sumLimit = document.getElementById('cc-total-limit');
+  const sumAvail = document.getElementById('cc-total-avail');
+  if (sumBill)  sumBill.textContent  = fmtMoney(totalBill);
+  if (sumLimit) sumLimit.textContent = fmtMoney(totalLimit);
+  if (sumAvail) sumAvail.textContent = fmtMoney(totalAvail);
+
+  // Carousel
+  if (cards.length === 0) {
+    scroll.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:260px;height:150px;background:rgba(255,255,255,0.04);border-radius:18px;color:var(--text3);font-size:14px;gap:8px;border:2px dashed var(--border)">
+      <span style="font-size:28px">💳</span><span>Nenhum cartão cadastrado</span>
+      <button onclick="openSheet('addCardSheet')" style="background:var(--g1);border:none;border-radius:8px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px">+ Adicionar</button>
+    </div>`;
+  } else {
+    scroll.innerHTML = cards.map(c => {
+      const bill = cardBill(c.id);
+      const pct  = c.limit > 0 ? Math.round((bill / c.limit) * 100) : 0;
+      const emoji = cardEmojiFromColor(c.color);
+      const danger = pct >= 80 ? ' danger' : '';
+      const alert  = pct >= 80 ? `<div class="cc-card-alert">⚠ ${pct}%</div>` : '';
+      return `<div class="cc-card${danger}" style="background:${c.color}" onclick="openCardDetail('${c.id}')">
+        <div class="cc-card-shine"></div>
+        ${alert}
+        <span class="cc-card-chip">${emoji}</span>
+        <div class="cc-card-num">•••• •••• •••• ${c.digits}</div>
+        <div class="cc-card-bot">
+          <div class="cc-card-name">${c.name}</div>
+          <div class="cc-card-limit">${fmtMoney(bill)} / ${fmtMoney(c.limit)}<br><span style="font-size:10px;opacity:.7">Fecha dia ${c.closeDay} · Vence dia ${c.dueDay}</span></div>
+        </div>
+      </div>`;
+    }).join('');
   }
-};
+
+  // Lista detalhada
+  const listItems = cards.map(c => {
+    const bill  = cardBill(c.id);
+    const pct   = c.limit > 0 ? Math.round((bill / c.limit) * 100) : 0;
+    const dotColor = c.color.match(/#[0-9A-Fa-f]{6}/g)?.[1] || '#05C98A';
+    const billColor = pct >= 80 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : '';
+    const metaColor = pct >= 80 ? 'color:var(--red);font-weight:700' : pct >= 60 ? 'color:var(--orange);font-weight:600' : 'color:var(--g1)';
+    const metaText  = pct >= 80 ? `⚠ ${pct}% do limite — atenção!` : pct >= 60 ? `⚡ ${pct}% do limite` : `✓ ${pct}% do limite — saudável`;
+    return `<div class="cc-item" onclick="openCardDetail('${c.id}')">
+      <div class="cc-item-top">
+        <div class="cc-item-dot" style="background:${dotColor}"></div>
+        <div class="cc-item-name">${c.name} <span style="font-weight:400;color:var(--text3);font-size:12px">••${c.digits}</span></div>
+        <div class="cc-item-bill" ${billColor ? `style="color:${billColor}"` : ''}>${fmtMoney(bill)}</div>
+      </div>
+      <div class="cc-item-bar"><div class="cc-item-fill" style="width:${pct}%;background:${dotColor}"></div></div>
+      <div class="cc-item-meta">
+        <span style="${metaColor}">${metaText}</span>
+        <span>Fecha <b>dia ${c.closeDay}</b> · Vence <b>dia ${c.dueDay}</b></span>
+      </div>
+    </div>`;
+  }).join('');
+
+  listEl.innerHTML = `
+    ${cards.length > 0 ? '<div class="sec-label" style="margin-bottom:12px">Detalhes por cartão</div>' : ''}
+    ${listItems}
+    <button class="cc-add-btn" onclick="openSheet('addCardSheet')">
+      <div class="cc-add-icon">＋</div>
+      <div class="cc-add-text">
+        <div class="t">Adicionar cartão</div>
+        <div class="s">Cadastre um novo cartão de crédito</div>
+      </div>
+    </button>`;
+
+  initCCScroll();
+}
 
 function openCardDetail(id) {
-  const c = CC_CARDS_DATA[id];
+  const cards = getCards();
+  const c = cards.find(x => x.id === id);
   if (!c) return;
-  const pct = Math.round((c.bill / c.limit) * 100);
-  const avail = c.limit - c.bill;
+  currentCardId = id;
+
+  const bill  = cardBill(id);
+  const pct   = c.limit > 0 ? Math.round((bill / c.limit) * 100) : 0;
+  const avail = Math.max(0, c.limit - bill);
   const barColor = pct >= 80 ? 'var(--red)' : pct >= 60 ? 'var(--orange)' : 'var(--g1)';
+  const emoji = cardEmojiFromColor(c.color);
 
   document.getElementById('cd-header').style.background = c.color;
-  document.getElementById('cd-emoji').textContent = c.emoji;
-  document.getElementById('cd-num').textContent  = `•••• •••• •••• ${c.num}`;
-  document.getElementById('cd-name').textContent = c.name;
-  document.getElementById('cd-bill').textContent = fmtMoney(c.bill);
-  document.getElementById('cd-limit').textContent = fmtMoney(c.limit);
-  document.getElementById('cd-avail').textContent = fmtMoney(avail);
-  document.getElementById('cd-dates').textContent = `Dia ${c.closeDay} / ${c.dueDay}`;
+  document.getElementById('cd-emoji').textContent  = emoji;
+  document.getElementById('cd-num').textContent    = `•••• •••• •••• ${c.digits}`;
+  document.getElementById('cd-name').textContent   = c.name;
+  document.getElementById('cd-bill').textContent   = fmtMoney(bill);
+  document.getElementById('cd-limit').textContent  = fmtMoney(c.limit);
+  document.getElementById('cd-avail').textContent  = fmtMoney(avail);
+  document.getElementById('cd-dates').textContent  = `Dia ${c.closeDay} / ${c.dueDay}`;
   document.getElementById('cd-pct-lbl').textContent = pct + '%';
   document.getElementById('cd-pct-bar').style.width = pct + '%';
   document.getElementById('cd-pct-bar').style.background = barColor;
+
+  // Lançamentos do cartão no mês
+  const exps = JSON.parse(localStorage.getItem('sm_expenses') || '[]');
+  const now  = new Date();
+  const cardExps = exps.filter(e => e.card === id &&
+    new Date(e.ts).getMonth() === now.getMonth() &&
+    new Date(e.ts).getFullYear() === now.getFullYear()
+  );
+  const txEl = document.getElementById('cd-txs');
+  if (txEl) {
+    if (cardExps.length === 0) {
+      txEl.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3);font-size:14px">Nenhum lançamento este mês</div>`;
+    } else {
+      txEl.innerHTML = cardExps.map(e => {
+        const bg = CAT_META[e.cat]?.bg || 'var(--blue-s)';
+        const ic = CAT_META[e.cat]?.icon || '💸';
+        const dt = new Date(e.ts);
+        const dateStr = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+        return `<div class="exp-item">
+          <div class="ei-icon" style="background:${bg}">${ic}</div>
+          <div class="ei-info">
+            <div class="ei-name">${e.desc}</div>
+            <div class="ei-cat">${ic} ${e.cat} · ${dateStr}</div>
+          </div>
+          <div class="ei-right"><div class="ei-amount">−${fmtMoney(e.amount)}</div></div>
+        </div>`;
+      }).join('');
+    }
+  }
+
   openSheet('cardDetailSheet');
 }
 
@@ -4133,19 +4193,61 @@ function pickCardColor(el) {
 
 function saveNewCard() {
   const name   = document.getElementById('new-card-name').value.trim();
-  const digits = document.getElementById('new-card-digits').value.trim();
+  const digits = document.getElementById('new-card-digits').value.trim().slice(-4);
   const limit  = parseFloat(document.getElementById('new-card-limit').value) || 0;
   const close  = parseInt(document.getElementById('new-card-close').value) || 0;
   const due    = parseInt(document.getElementById('new-card-due').value) || 0;
   if (!name || !digits || !limit || !close || !due) {
     toast('⚠️ Preencha todos os campos', 'warn'); return;
   }
-  // In production, save to localStorage/API; for prototype, show toast
+  const newCard = {
+    id: 'card_' + Date.now(),
+    name, digits, limit, closeDay: close, dueDay: due,
+    color: selectedCardColor,
+    createdAt: new Date().toISOString()
+  };
+  const cards = getCards();
+  cards.push(newCard);
+  saveCardsLocal(cards);
+  saveCardsToFirestore(cards);
+  renderCards();
   toast(`💳 ${name} ••${digits} adicionado!`, 'ok');
   closeSheet('addCardSheet');
-  // Clear form
   ['new-card-name','new-card-digits','new-card-limit','new-card-close','new-card-due']
-    .forEach(id => document.getElementById(id).value = '');
+    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  // Reset cor selecionada
+  selectedCardColor = 'linear-gradient(135deg,#6D28D9,#8B5CF6)';
+  document.querySelectorAll('.cc-color-swatch').forEach((s,i) => s.classList.toggle('sel', i===0));
+}
+
+function deleteCard(id) {
+  if (!confirm('Excluir este cartão?')) return;
+  const cards = getCards().filter(c => c.id !== id);
+  saveCardsLocal(cards);
+  saveCardsToFirestore(cards);
+  renderCards();
+  closeSheet('cardDetailSheet');
+  toast('🗑️ Cartão removido', 'warn');
+}
+
+async function saveCardsToFirestore(cards) {
+  if (!fbUser) return;
+  try {
+    await fbDb.collection('users').doc(fbUser.uid).update({ cards: JSON.stringify(cards) });
+  } catch(e) {
+    // Se doc não existe ainda, usa set com merge
+    fbDb.collection('users').doc(fbUser.uid).set({ cards: JSON.stringify(cards) }, { merge: true })
+      .catch(err => console.warn('[FB] saveCards:', err));
+  }
+}
+
+async function loadCardsFromFirestore(uid) {
+  try {
+    const doc = await fbDb.collection('users').doc(uid).get();
+    if (doc.exists && doc.data().cards) {
+      localStorage.setItem('sm_cards', doc.data().cards);
+    }
+  } catch(e) { console.warn('[FB] loadCards:', e); }
 }
 
 // Drag scroll for credit card carousel
@@ -5040,7 +5142,7 @@ function logOut() {
   fbUser = null;
   // Limpa cache local
   ['sm_logged_in','sm_uid','sm_sal','sm_payday','sm_fixos','sm_fixos_list','sm_prof',
-   'sm_trial_start','sm_expenses',LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
+   'sm_trial_start','sm_expenses','sm_cards',LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
   setTimeout(() => {
     document.getElementById('app').style.display = 'none';
     document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
