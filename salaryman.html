@@ -309,7 +309,7 @@ input, select, button, textarea { font-family:inherit; }
 
 /* ── SCREEN: HOME ────────────────────────────────────── */
 .home-header {
-  padding:18px 18px 14px;
+  padding:18px 110px 14px 18px;
   background:var(--surface); border-bottom:1px solid var(--border);
   display:flex; align-items:center; justify-content:space-between;
   position:sticky; top:0; z-index:50;
@@ -1136,7 +1136,7 @@ body .ob-logo-icon, body .fab, body .toast { transition: none !important; }
 
 /* ── TOP ACTION BAR (alerta + tema) ──────────────────── */
 #top-actions {
-  position: fixed; top: 14px; right: 16px; z-index: 500;
+  position: fixed; top: 14px; right: 16px; z-index: 9000;
   display: flex; align-items: center; gap: 8px;
 }
 .top-action-btn {
@@ -1809,7 +1809,7 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 
 <!-- ═══ APP ═════════════════════════════════════════ -->
 <div id="app">
-  <!-- Top action bar: alertas + tema -->
+  <!-- Top action bar: alertas + tema (z-index alto para ficar sempre visível) -->
   <div id="top-actions">
     <button class="top-action-btn" onclick="goTab('alertas',null)" title="Alertas">
       🔔<span id="top-notif-dot"></span>
