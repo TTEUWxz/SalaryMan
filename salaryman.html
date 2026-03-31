@@ -1505,8 +1505,9 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 .cli-badge.pending { background:rgba(249,115,22,.15); color:#F97316; }
 .cli-badge.overdue { background:rgba(239,68,68,.15); color:var(--red); }
 
-.cli-fab { position:fixed; bottom:84px; right:20px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#05C98A,#3D7EFF); border:none; color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(5,201,138,.45); cursor:pointer; z-index:100; transition:.2s; }
+.cli-fab { display:none; position:fixed; bottom:84px; right:20px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#05C98A,#3D7EFF); border:none; color:#fff; font-size:26px; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(5,201,138,.45); cursor:pointer; z-index:100; transition:.2s; }
 .cli-fab:active { transform:scale(.92); }
+#tab-clientes.active .cli-fab { display:flex; }
 
 .cli-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; gap:12px; text-align:center; }
 .cli-empty-icon { font-size:48px; }
