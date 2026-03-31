@@ -1473,6 +1473,48 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
 .pw-btn:active { transform:translateY(0); }
 .pw-logout { background:none; border:none; color:rgba(255,255,255,0.3); font-size:12.5px; cursor:pointer; padding:6px 0; }
 .pw-logout:hover { color:rgba(255,255,255,0.55); }
+/* ══════════════════════════════════════════════
+   MÓDULO CLIENTES / PJ
+   ══════════════════════════════════════════════ */
+.cli-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px 16px 0; }
+.cli-sum-card { background:var(--card); border-radius:14px; padding:14px 12px; text-align:center; border:1px solid var(--border); }
+.cli-sum-val  { font-size:16px; font-weight:800; color:#fff; }
+.cli-sum-lbl  { font-size:10px; color:var(--text3); margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
+.cli-sum-card.green .cli-sum-val { color:var(--g1); }
+.cli-sum-card.orange .cli-sum-val { color:#F97316; }
+
+.cli-filter-row { display:flex; gap:8px; padding:14px 16px 0; overflow-x:auto; scrollbar-width:none; }
+.cli-filter-row::-webkit-scrollbar { display:none; }
+.cli-filter-btn { flex-shrink:0; padding:6px 14px; border-radius:99px; border:1.5px solid var(--border); background:transparent; color:var(--text2); font-size:12px; font-weight:600; cursor:pointer; transition:.15s; }
+.cli-filter-btn.active { background:var(--g1); border-color:var(--g1); color:#fff; }
+
+.cli-list { padding:14px 16px; display:flex; flex-direction:column; gap:10px; padding-bottom:100px; }
+.cli-item { background:var(--card); border-radius:16px; padding:14px 16px; border:1px solid var(--border); display:flex; align-items:center; gap:12px; cursor:pointer; transition:.15s; }
+.cli-item:active { transform:scale(.98); }
+.cli-item.paid   { border-left:3px solid var(--g1); }
+.cli-item.pending { border-left:3px solid #F97316; }
+.cli-item.overdue { border-left:3px solid var(--red); }
+.cli-avatar { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:#fff; flex-shrink:0; }
+.cli-info { flex:1; min-width:0; }
+.cli-name { font-size:14px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cli-service { font-size:12px; color:var(--text3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cli-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.cli-value { font-size:15px; font-weight:800; color:#fff; }
+.cli-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:99px; }
+.cli-badge.paid    { background:rgba(5,201,138,.15); color:var(--g1); }
+.cli-badge.pending { background:rgba(249,115,22,.15); color:#F97316; }
+.cli-badge.overdue { background:rgba(239,68,68,.15); color:var(--red); }
+
+.cli-fab { position:fixed; bottom:84px; right:20px; width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#05C98A,#3D7EFF); border:none; color:#fff; font-size:26px; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(5,201,138,.45); cursor:pointer; z-index:100; transition:.2s; }
+.cli-fab:active { transform:scale(.92); }
+
+.cli-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; gap:12px; text-align:center; }
+.cli-empty-icon { font-size:48px; }
+.cli-empty-title { font-size:17px; font-weight:700; color:#fff; }
+.cli-empty-sub   { font-size:13px; color:var(--text3); }
+
+.cli-chart-wrap { margin:14px 16px 0; background:var(--card); border-radius:16px; padding:16px; border:1px solid var(--border); }
+.cli-chart-title { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:12px; }
 </style>
 </head>
 <body>
@@ -1778,7 +1820,7 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
   <nav class="bottom-nav">
     <button class="nav-tab active" onclick="goTab('home',this)"><span class="tab-icon">🏠</span><span class="tab-label">Início</span></button>
     <button class="nav-tab" onclick="goTab('gastos',this)"><span class="tab-icon">💳</span><span class="tab-label">Gastos</span></button>
-    <button class="nav-tab" onclick="goTab('orcamento',this)"><span class="tab-icon">📊</span><span class="tab-label">Orçamento</span></button>
+    <button class="nav-tab" onclick="goTab('clientes',this)"><span class="tab-icon">🤝</span><span class="tab-label">Clientes</span></button>
     <button class="nav-tab" onclick="goTab('metas',this)"><span class="tab-icon">🎯</span><span class="tab-label">Metas</span></button>
     <button class="nav-tab" onclick="goTab('perfil',this)"><span class="tab-icon">👤</span><span class="tab-label">Perfil</span></button>
   </nav>
@@ -2278,6 +2320,54 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
   </div>
 
   <!-- ── PERFIL ─────────────────────────────────────── -->
+  <!-- ══════════════════════════════════════════════
+       TAB CLIENTES — Gestão de receitas PJ
+       ══════════════════════════════════════════════ -->
+  <div class="screen" id="tab-clientes">
+
+    <!-- Header -->
+    <div class="home-header">
+      <div><div class="greeting">Clientes 🤝</div><div class="month" id="cli-month-label">Março de 2026</div></div>
+      <button onclick="openSheet('addClientSheet')" style="background:var(--g1);border:none;border-radius:10px;padding:8px 14px;color:#fff;font-weight:700;font-size:13px;cursor:pointer">+ Novo</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="cli-summary">
+      <div class="cli-sum-card green">
+        <div class="cli-sum-val" id="cli-sum-received">R$ 0</div>
+        <div class="cli-sum-lbl">Recebido</div>
+      </div>
+      <div class="cli-sum-card orange">
+        <div class="cli-sum-val" id="cli-sum-pending">R$ 0</div>
+        <div class="cli-sum-lbl">A receber</div>
+      </div>
+      <div class="cli-sum-card">
+        <div class="cli-sum-val" id="cli-sum-count">0</div>
+        <div class="cli-sum-lbl">Clientes</div>
+      </div>
+    </div>
+
+    <!-- Gráfico faturamento -->
+    <div class="cli-chart-wrap">
+      <div class="cli-chart-title">📈 Faturamento mensal</div>
+      <div style="height:140px;position:relative"><canvas id="chartClientes"></canvas></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="cli-filter-row">
+      <button class="cli-filter-btn active" onclick="filterClients('all',this)">Todos</button>
+      <button class="cli-filter-btn" onclick="filterClients('pending',this)">⏳ Pendente</button>
+      <button class="cli-filter-btn" onclick="filterClients('paid',this)">✅ Pago</button>
+      <button class="cli-filter-btn" onclick="filterClients('overdue',this)">🔴 Atrasado</button>
+    </div>
+
+    <!-- Lista de clientes -->
+    <div class="cli-list" id="cli-list"></div>
+
+    <!-- FAB -->
+    <button class="cli-fab" onclick="openSheet('addClientSheet')">＋</button>
+  </div>
+
   <div class="screen" id="tab-perfil">
     <div class="profile-hero">
       <div class="ph-orb"></div>
@@ -2555,6 +2645,82 @@ body.dark .imp-chk-box { background:var(--dark2); border-color:var(--border); }
       <button class="btn btn-ghost" onclick="closeSheet('editSal')">Cancelar</button>
       <button class="btn btn-primary" onclick="toast('✅ Salário atualizado!','ok');closeSheet('editSal')">Salvar</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ ADD CLIENT SHEET ══════════════════════════════════ -->
+<div class="overlay" id="addClientSheet" onclick="if(event.target===this)closeSheet('addClientSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="addClientTitle">🤝 Novo Cliente</div>
+    <input type="hidden" id="edit-client-id">
+    <div class="f-row">
+      <label>Nome do cliente</label>
+      <input type="text" id="cli-name" placeholder="Ex: João Silva, Empresa XPTO…">
+    </div>
+    <div class="f-row">
+      <label>Serviço / Descrição</label>
+      <input type="text" id="cli-service" placeholder="Ex: Consultoria, Design, Aula…">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="f-row" style="margin-bottom:0">
+        <label>Valor (R$)</label>
+        <div class="f-pfx"><span class="pfx">R$</span><input type="number" id="cli-value" placeholder="0,00" step="0.01"></div>
+      </div>
+      <div class="f-row" style="margin-bottom:0">
+        <label>Vencimento</label>
+        <input type="date" id="cli-due">
+      </div>
+    </div>
+    <div class="f-row" style="margin-top:12px">
+      <label>Status</label>
+      <div style="display:flex;gap:8px">
+        <button class="cli-filter-btn active" id="sts-pending" onclick="selectClientStatus('pending')">⏳ Pendente</button>
+        <button class="cli-filter-btn" id="sts-paid" onclick="selectClientStatus('paid')">✅ Pago</button>
+        <button class="cli-filter-btn" id="sts-overdue" onclick="selectClientStatus('overdue')">🔴 Atrasado</button>
+      </div>
+    </div>
+    <div class="f-row" style="margin-top:12px">
+      <label>Observações (opcional)</label>
+      <input type="text" id="cli-notes" placeholder="Informações adicionais…">
+    </div>
+    <div class="sheet-actions" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closeSheet('addClientSheet')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveClient()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CLIENT DETAIL SHEET ═══════════════════════════════ -->
+<div class="overlay" id="clientDetailSheet" onclick="if(event.target===this)closeSheet('clientDetailSheet')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div class="cli-avatar" id="cds-avatar" style="background:linear-gradient(135deg,#05C98A,#3D7EFF)">?</div>
+      <div>
+        <div style="font-size:18px;font-weight:800;color:#fff" id="cds-name">Cliente</div>
+        <div style="font-size:13px;color:var(--text3)" id="cds-service">Serviço</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:var(--dark2);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:20px;font-weight:800;color:#fff" id="cds-value">R$ 0</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Valor</div>
+      </div>
+      <div style="background:var(--dark2);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:14px;font-weight:700" id="cds-badge">Pendente</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Status</div>
+      </div>
+    </div>
+    <div style="background:var(--dark2);border-radius:12px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between">
+      <div><div style="font-size:11px;color:var(--text3)">Vencimento</div><div style="font-size:14px;font-weight:700;color:#fff;margin-top:3px" id="cds-due">—</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:var(--text3)">Observações</div><div style="font-size:13px;color:var(--text2);margin-top:3px" id="cds-notes">—</div></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-ghost" onclick="editClientFromDetail()" style="flex:1">✏️ Editar</button>
+      <button class="btn btn-primary" id="cds-pay-btn" onclick="markPaidFromDetail()" style="flex:1">✅ Marcar pago</button>
+    </div>
+    <button onclick="deleteClientFromDetail()" style="width:100%;margin-top:10px;background:none;border:1px solid var(--red);border-radius:12px;padding:12px;color:var(--red);font-weight:700;cursor:pointer;font-size:14px">🗑️ Excluir cliente</button>
   </div>
 </div>
 
@@ -2954,6 +3120,7 @@ async function loadProfileFromFirestore(uid) {
     if (d.rpt_next)     localStorage.setItem('sm_rpt_next', d.rpt_next);
     if (d.theme)        localStorage.setItem('sm_theme', d.theme);
     if (d.cards)        localStorage.setItem('sm_cards', d.cards);
+    if (d.clients)      localStorage.setItem('sm_clients', d.clients);
     return true;
   } catch(e) { console.warn('[FB] loadProfile error:', e); return false; }
 }
@@ -2984,6 +3151,7 @@ async function saveProfileToFirestore() {
     rpt_next:    localStorage.getItem('sm_rpt_next') || '',
     theme:       localStorage.getItem('sm_theme') || '',
     cards:       localStorage.getItem('sm_cards') || '[]',
+    clients:     localStorage.getItem('sm_clients') || '[]',
     email:       fbUser.email || '',
     name:        fbUser.displayName || '',
     updatedAt:   new Date().toISOString()
@@ -3151,6 +3319,7 @@ function launchApp() {
   initTrial();
   renderDashboard();
   renderCards();
+  renderClientes();
   setTimeout(renderInvPath, 600);
   setTimeout(checkAutoSend, 1200);
 }
@@ -3355,7 +3524,8 @@ function goTab(id,btn){
   else document.querySelectorAll('.nav-tab').forEach(b=>{
     if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'")) b.classList.add('active');
   });
-  if(id==='gastos'){ setTimeout(initChart,80); renderImportedTransactions(); renderDashboard(); }
+  if(id==='gastos')   { setTimeout(initChart,80); renderImportedTransactions(); renderDashboard(); }
+  if(id==='clientes') { renderClientes(); }
 }
 
 /* ── ANIMATIONS ───────────────────────────── */
@@ -5090,6 +5260,257 @@ document.addEventListener('DOMContentLoaded', () => {
   zone.addEventListener('click', () => document.getElementById('imp-file-input').click());
 });
 
+/* ══════════════════════════════════════════════════════
+   MÓDULO CLIENTES / PJ
+   ══════════════════════════════════════════════════════ */
+
+const CLI_COLORS = [
+  'linear-gradient(135deg,#05C98A,#3D7EFF)',
+  'linear-gradient(135deg,#6D28D9,#8B5CF6)',
+  'linear-gradient(135deg,#C2410C,#F97316)',
+  'linear-gradient(135deg,#1A4A8A,#3D7EFF)',
+  'linear-gradient(135deg,#831843,#EC4899)',
+  'linear-gradient(135deg,#065F46,#059669)',
+];
+
+let currentClientFilter = 'all';
+let currentClientId = null;
+let newClientStatus = 'pending';
+
+function getClients() {
+  try { return JSON.parse(localStorage.getItem('sm_clients') || '[]'); }
+  catch { return []; }
+}
+function saveClientsLocal(clients) {
+  localStorage.setItem('sm_clients', JSON.stringify(clients));
+}
+
+function selectClientStatus(status) {
+  newClientStatus = status;
+  ['pending','paid','overdue'].forEach(s => {
+    document.getElementById('sts-' + s)?.classList.toggle('active', s === status);
+  });
+}
+
+function filterClients(filter, btn) {
+  currentClientFilter = filter;
+  document.querySelectorAll('.cli-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderClientList();
+}
+
+function renderClientes() {
+  const now = new Date();
+  const label = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const monthEl = document.getElementById('cli-month-label');
+  if (monthEl) monthEl.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+
+  const clients = getClients();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const monthClients = clients.filter(c => c.month === thisMonth);
+
+  const received = monthClients.filter(c => c.status === 'paid').reduce((s,c) => s + c.value, 0);
+  const pending  = monthClients.filter(c => c.status !== 'paid').reduce((s,c) => s + c.value, 0);
+
+  const sumR = document.getElementById('cli-sum-received');
+  const sumP = document.getElementById('cli-sum-pending');
+  const sumC = document.getElementById('cli-sum-count');
+  if (sumR) sumR.textContent = fmtMoney(received);
+  if (sumP) sumP.textContent = fmtMoney(pending);
+  if (sumC) sumC.textContent = monthClients.length;
+
+  renderClientChart(clients);
+  renderClientList();
+}
+
+function renderClientList() {
+  const listEl = document.getElementById('cli-list');
+  if (!listEl) return;
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let clients = getClients().filter(c => c.month === thisMonth);
+
+  if (currentClientFilter !== 'all') {
+    clients = clients.filter(c => c.status === currentClientFilter);
+  }
+
+  if (clients.length === 0) {
+    listEl.innerHTML = `<div class="cli-empty">
+      <div class="cli-empty-icon">🤝</div>
+      <div class="cli-empty-title">Nenhum cliente ${currentClientFilter !== 'all' ? 'nesta categoria' : 'este mês'}</div>
+      <div class="cli-empty-sub">Toque em "+ Novo" para cadastrar um cliente</div>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = clients.map(c => {
+    const initial = (c.name || '?')[0].toUpperCase();
+    const colorIdx = c.name.charCodeAt(0) % CLI_COLORS.length;
+    const badgeLabel = c.status === 'paid' ? '✅ Pago' : c.status === 'overdue' ? '🔴 Atrasado' : '⏳ Pendente';
+    const dueStr = c.due ? new Date(c.due + 'T12:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}) : '';
+    return `<div class="cli-item ${c.status}" onclick="openClientDetail('${c.id}')">
+      <div class="cli-avatar" style="background:${CLI_COLORS[colorIdx]}">${initial}</div>
+      <div class="cli-info">
+        <div class="cli-name">${c.name}</div>
+        <div class="cli-service">${c.service}${dueStr ? ' · Vence ' + dueStr : ''}</div>
+      </div>
+      <div class="cli-right">
+        <div class="cli-value">${fmtMoney(c.value)}</div>
+        <div class="cli-badge ${c.status}">${badgeLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderClientChart(clients) {
+  const canvas = document.getElementById('chartClientes');
+  if (!canvas) return;
+  const now = new Date();
+  const months = [];
+  const received = [];
+  const pending = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('pt-BR', { month: 'short' });
+    months.push(label);
+    const mc = clients.filter(c => c.month === key);
+    received.push(mc.filter(c => c.status === 'paid').reduce((s,c) => s + c.value, 0));
+    pending.push(mc.filter(c => c.status !== 'paid').reduce((s,c) => s + c.value, 0));
+  }
+  if (window._chartClientes) { window._chartClientes.destroy(); }
+  window._chartClientes = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Recebido', data: received, backgroundColor: 'rgba(5,201,138,.8)', borderRadius: 6 },
+        { label: 'Pendente', data: pending,  backgroundColor: 'rgba(249,115,22,.5)', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: 'rgba(255,255,255,.6)', font: { size: 10 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: 'rgba(255,255,255,.4)', font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: 'rgba(255,255,255,.4)', font: { size: 10 }, callback: v => 'R$' + (v >= 1000 ? (v/1000).toFixed(1) + 'k' : v) }, grid: { color: 'rgba(255,255,255,.06)' } }
+      }
+    }
+  });
+}
+
+function openClientDetail(id) {
+  const clients = getClients();
+  const c = clients.find(x => x.id === id);
+  if (!c) return;
+  currentClientId = id;
+  const colorIdx = c.name.charCodeAt(0) % CLI_COLORS.length;
+  const el = document.getElementById('cds-avatar');
+  if (el) { el.textContent = c.name[0].toUpperCase(); el.style.background = CLI_COLORS[colorIdx]; }
+  document.getElementById('cds-name').textContent    = c.name;
+  document.getElementById('cds-service').textContent = c.service;
+  document.getElementById('cds-value').textContent   = fmtMoney(c.value);
+  const badgeEl = document.getElementById('cds-badge');
+  if (badgeEl) {
+    badgeEl.textContent = c.status === 'paid' ? '✅ Pago' : c.status === 'overdue' ? '🔴 Atrasado' : '⏳ Pendente';
+    badgeEl.style.color = c.status === 'paid' ? 'var(--g1)' : c.status === 'overdue' ? 'var(--red)' : '#F97316';
+  }
+  document.getElementById('cds-due').textContent   = c.due ? new Date(c.due + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  document.getElementById('cds-notes').textContent = c.notes || '—';
+  const payBtn = document.getElementById('cds-pay-btn');
+  if (payBtn) { payBtn.style.display = c.status === 'paid' ? 'none' : ''; }
+  openSheet('clientDetailSheet');
+}
+
+function markPaidFromDetail() {
+  if (!currentClientId) return;
+  const clients = getClients();
+  const c = clients.find(x => x.id === currentClientId);
+  if (!c) return;
+  c.status = 'paid';
+  c.paidDate = new Date().toISOString();
+  saveClientsLocal(clients);
+  saveClientsToFirestore(clients);
+  renderClientes();
+  closeSheet('clientDetailSheet');
+  toast('✅ Pagamento registrado!', 'ok');
+}
+
+function editClientFromDetail() {
+  if (!currentClientId) return;
+  const clients = getClients();
+  const c = clients.find(x => x.id === currentClientId);
+  if (!c) return;
+  closeSheet('clientDetailSheet');
+  // Preenche o form
+  document.getElementById('addClientTitle').textContent = '✏️ Editar Cliente';
+  document.getElementById('edit-client-id').value = c.id;
+  document.getElementById('cli-name').value    = c.name;
+  document.getElementById('cli-service').value = c.service;
+  document.getElementById('cli-value').value   = c.value;
+  document.getElementById('cli-due').value     = c.due || '';
+  document.getElementById('cli-notes').value   = c.notes || '';
+  selectClientStatus(c.status);
+  openSheet('addClientSheet');
+}
+
+function deleteClientFromDetail() {
+  if (!currentClientId) return;
+  if (!confirm('Excluir este cliente?')) return;
+  const clients = getClients().filter(c => c.id !== currentClientId);
+  saveClientsLocal(clients);
+  saveClientsToFirestore(clients);
+  renderClientes();
+  closeSheet('clientDetailSheet');
+  toast('🗑️ Cliente removido', 'warn');
+}
+
+function saveClient() {
+  const name    = document.getElementById('cli-name').value.trim();
+  const service = document.getElementById('cli-service').value.trim();
+  const value   = parseFloat(document.getElementById('cli-value').value) || 0;
+  const due     = document.getElementById('cli-due').value;
+  const notes   = document.getElementById('cli-notes').value.trim();
+  const editId  = document.getElementById('edit-client-id').value;
+
+  if (!name || !service || !value) { toast('⚠️ Preencha nome, serviço e valor', 'warn'); return; }
+
+  const now = new Date();
+  const month = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const clients = getClients();
+
+  if (editId) {
+    // Edição
+    const idx = clients.findIndex(c => c.id === editId);
+    if (idx >= 0) {
+      clients[idx] = { ...clients[idx], name, service, value, due, notes, status: newClientStatus };
+    }
+  } else {
+    // Novo
+    clients.push({ id: 'cli_' + Date.now(), name, service, value, due, notes, status: newClientStatus, month, createdAt: now.toISOString() });
+  }
+
+  saveClientsLocal(clients);
+  saveClientsToFirestore(clients);
+  renderClientes();
+  closeSheet('addClientSheet');
+  toast(editId ? '✅ Cliente atualizado!' : `🤝 ${name} adicionado!`, 'ok');
+
+  // Reset form
+  ['cli-name','cli-service','cli-value','cli-due','cli-notes','edit-client-id'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('addClientTitle').textContent = '🤝 Novo Cliente';
+  selectClientStatus('pending');
+}
+
+async function saveClientsToFirestore(clients) {
+  if (!fbUser) return;
+  try {
+    await fbDb.collection('users').doc(fbUser.uid).set({ clients: JSON.stringify(clients) }, { merge: true });
+  } catch(e) { console.warn('[FB] saveClients:', e); }
+}
+
 /* ── EDITAR NOME ─────────────────────────────── */
 function startEditName() {
   const input = document.getElementById('ph-name-input');
@@ -5142,7 +5563,7 @@ function logOut() {
   fbUser = null;
   // Limpa cache local
   ['sm_logged_in','sm_uid','sm_sal','sm_payday','sm_fixos','sm_fixos_list','sm_prof',
-   'sm_trial_start','sm_expenses','sm_cards',LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
+   'sm_trial_start','sm_expenses','sm_cards','sm_clients',LS_PHONE, LS_AUTO, LS_FREQ, LS_LAST, LS_NEXT].forEach(k => localStorage.removeItem(k));
   setTimeout(() => {
     document.getElementById('app').style.display = 'none';
     document.querySelectorAll('.ob-step').forEach(s => s.classList.remove('active'));
